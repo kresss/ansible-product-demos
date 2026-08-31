@@ -840,6 +840,11 @@ controller_workflows:
         unified_job_template: 'SUBMIT FEEDBACK'
         extra_data:
           feedback: Failed to create AWS keypair
+      - identifier: EC2 Stats
+        unified_job_template: Cloud | AWS | Display EC2 Stats
+        all_parents_must_converge: true
+        always_nodes:
+          - Deploy RHEL9 KVM Blueprint
       - identifier: Deploy RHEL9 KVM Blueprint
         unified_job_template: Cloud | AWS | Create VM
         extra_data:
@@ -851,14 +856,10 @@ controller_workflows:
           - Ticket - Instance Failed
       - identifier: Update Inventory
         unified_job_template: AWS Inventory
-        success_nodes:
-          - Publish VPC Report
       - identifier: Ticket - Instance Failed
         unified_job_template: 'SUBMIT FEEDBACK'
         extra_data:
           feedback: Failed to create AWS instance
-      - identifier: Publish VPC Report
-        unified_job_template: Cloud | AWS | VPC Report
       - identifier: Ticket - VPC Failed
         unified_job_template: 'SUBMIT FEEDBACK'
         extra_data:
@@ -893,7 +894,7 @@ controller_workflows:
         extra_data:
           create_vm_vm_name: aws_rhel9_kvm
         success_nodes:
-          - Delete Infrastructure
+          - Update Inventory
       - identifier: Update Inventory
         unified_job_template: AWS Inventory
         all_parents_must_converge: true
