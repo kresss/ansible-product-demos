@@ -14,6 +14,30 @@
           - vm_os_image != ''
           - vm_os_image != 'undef'
 
+    - name: Ensure libvirt is installed
+      ansible.builtin.package:
+        name:
+          - libvirt
+          - qemu-kvm
+          - libguestfs-tools
+          - python3-libvirt
+          - virt-install
+          - python3-lxml
+          - guestfs-tools
+        state: present
+
+    - name: Ensure libvirtd service is running and enabled
+      ansible.builtin.service:
+        name: libvirtd
+        state: started
+        enabled: true
+
+    - name: Add user to libvirt group
+      ansible.builtin.user:
+        name: "{{ ansible_user }}"
+        groups: libvirt
+        append: true
+
     - name: Download VM OS Image
       ansible.builtin.get_url:
         url: "{{ vm_os_image }}"
