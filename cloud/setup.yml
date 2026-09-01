@@ -761,7 +761,7 @@ controller_workflows:
         all_parents_must_converge: true
 
   - name: Deploy Nested Virt Cloud Stack in AWS
-    description: A workflow to deploy a cloud stack
+    description: A workflow to deploy a nested kvm host
     organization: Ansible Product Demos (APD)
     notification_templates_started: Telemetry
     notification_templates_success: Telemetry
@@ -866,7 +866,7 @@ controller_workflows:
           feedback: Failed to create AWS VPC
 
   - name: Destroy Nested Virt Cloud Stack in AWS
-    description: Tear down the cloud stack VMs, VPC, and keypair created by Deploy Cloud Stack in AWS
+    description: Tear down the nested kvm host
     organization: Ansible Product Demos (APD)
     notification_templates_started: Telemetry
     notification_templates_success: Telemetry

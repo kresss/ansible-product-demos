@@ -266,6 +266,7 @@ controller_templates:
           choices:
             - windows_core
             - windows_full
+            - rhel9_kvm
             - rhel9
             - rhel8
             - rhel7
