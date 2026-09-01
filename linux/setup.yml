@@ -571,6 +571,37 @@ controller_templates:
           variable: application
           required: true
 
+  - name: "LINUX | Create Nested VM"
+    job_type: run
+    inventory: Ansible Product Demos Inventory
+    project: "Ansible Product Demos"
+    playbook: "linux/create_nested_vm.yml"
+    notification_templates_started: Telemetry
+    notification_templates_success: Telemetry
+    notification_templates_error: Telemetry
+    use_fact_cache: true
+    credentials:
+      - APD Machine Credential
+    survey_enabled: true
+    survey:
+      name: ''
+      description: ''
+      spec:
+        - question_name: Server Name or Pattern
+          type: text
+          variable: _hosts
+          required: true
+        - question_name: Nested VM Name
+          type: text
+          variable: application
+          required: true
+          default: my_nested_vm
+        - question_name: Nested VM OS Image URL
+          type: text
+          variable: vm_os_image
+          required: true
+          default: "https://download.fedoraproject.org/pub/fedora/linux/releases/44/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-44-1.7.x86_64.qcow2"
+
 controller_workflows:
   - name: "Linux | Compliance Workflow"
     description: A workflow to generate a SCAP report and run enforce on findings
