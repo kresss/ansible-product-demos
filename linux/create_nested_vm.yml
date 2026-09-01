@@ -3,6 +3,10 @@
   hosts: "{{ _hosts | default(omit)  }}"
   become: true
 
+  vars:
+    host_port: "{{ _host_port | default(8080) }}"
+    vm_port: "{{ _vm_port | default(80) }}"
+
   tasks:
     - name: Check for vars
       ansible.builtin.assert:
