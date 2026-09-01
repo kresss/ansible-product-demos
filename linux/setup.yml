@@ -593,7 +593,7 @@ controller_templates:
           required: true
         - question_name: Nested VM Name
           type: text
-          variable: application
+          variable: vm_name
           required: true
           default: my_nested_vm
         - question_name: Nested VM OS Image URL
