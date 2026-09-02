@@ -3,20 +3,23 @@
   <memory unit='KiB'>2097152</memory>
   <vcpu placement='static'>2</vcpu>
   <os>
-    <type arch='x86_64' machine='pc'>hvm</type>
+    <type arch='x86_64' machine='q35'>hvm</type>
     <boot dev='hd'/>
   </os>
+  
   <devices>
     <emulator>/usr/libexec/qemu-kvm</emulator>
     <disk type='file' device='disk'>
-      <driver name='qemu' type='qcow2' cache='none'/>
+      <driver name='qemu' type='qcow2' cache='none' io='native'/>
       <source file='/var/lib/libvirt/images/{{ vm_name }}.qcow2'/>
       <target dev='vda' bus='virtio'/>
     </disk>
+    
     <interface type='network'>
       <source network='default'/>
       <model type='virtio'/>
     </interface>
+
     <console type='pty'/>
   </devices>
 </domain>
