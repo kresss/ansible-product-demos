@@ -582,6 +582,7 @@ controller_templates:
     use_fact_cache: true
     credentials:
       - APD Machine Credential
+      - RHSM Registration
     survey_enabled: true
     survey:
       name: ''

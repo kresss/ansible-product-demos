@@ -17,6 +17,12 @@
           - vm_os_image is defined
           - vm_os_image != ''
           - vm_os_image != 'undef'
+          - rhsm_org_id is defined
+          - rhsm_activation_key is defined
+          - rhsm_org_id != 'REPLACEME'
+          - rhsm_activation_key != 'REPLACEME'
+          - rhsm_org_id | length > 0
+          - rhsm_activation_key | length > 0
 
     - name: Ensure libvirt is installed
       ansible.builtin.package:
@@ -63,6 +69,7 @@
         virt-customize
         -a /var/lib/libvirt/images/{{ vm_name }}.qcow2
         --hostname {{ vm_name }}
+        --run-command "subscription-manager register --activationkey={{ rhsm_activation_key }} --org={{ rhsm_org_id }}" \
         --install httpd
         --run-command "systemctl enable httpd && firewall-cmd --add-service=http --permanent"
         --uninstall cloud-init
