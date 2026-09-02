@@ -64,19 +64,16 @@
         mode: "0660"
       register: copy_results
 
-    - name: Enable HTTPD on Nested VM Image
-      ansible.builtin.shell: >
-        virt-customize
-        -a /var/lib/libvirt/images/{{ vm_name }}.qcow2
-        --hostname {{ vm_name }}
-        --run-command "subscription-manager register --activationkey={{ rhsm_activation_key }} --org={{ rhsm_org_id }}" \
-        --install httpd
-        --run-command "systemctl enable httpd && firewall-cmd --add-service=http --permanent"
-        --uninstall cloud-init
-        --selinux-relabel
-      when: copy_results is changed
-      args:
-        executable: /bin/bash
+    # - name: Enable HTTPD on Nested VM Image
+    #   ansible.builtin.shell: >
+    #     virt-customize
+    #     -a /var/lib/libvirt/images/{{ vm_name }}.qcow2
+    #     --hostname {{ vm_name }}
+    #     --uninstall cloud-init
+    #     --selinux-relabel
+    #   when: copy_results is changed
+    #   args:
+    #     executable: /bin/bash
 
     - name: Define the VM
       ansible.builtin.template:
