@@ -25,7 +25,7 @@
           - rhsm_activation_key | length > 0
 
     - name: Ensure libvirt is installed
-      ansible.builtin.package:
+      ansible.builtin.dnf:
         name:
           - libvirt
           - qemu-kvm
