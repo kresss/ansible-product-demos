@@ -601,7 +601,6 @@ controller_templates:
           type: text
           variable: vm_os_image
           required: true
-          default: "https://download.fedoraproject.org/pub/fedora/linux/releases/44/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-44-1.7.x86_64.qcow2"
 
 controller_workflows:
   - name: "Linux | Compliance Workflow"
