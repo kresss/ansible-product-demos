@@ -58,7 +58,7 @@
         mode: "0660"
       register: copy_results
 
-    - name: Enable HTTPD on Nested VM
+    - name: Enable HTTPD on Nested VM Image
       ansible.builtin.shell: >
         virt-customize
         -a /var/lib/libvirt/images/{{ vm_name }}.qcow2
@@ -119,6 +119,14 @@
         permanent: true
         state: enabled
       notify: Reload firewalld
+
+    - name: Enable IPv4 forwarding in sysctl
+      ansible.posix.sysctl:
+        name: net.ipv4.ip_forward
+        value: '1'
+        sysctl_set: true
+        state: present
+        reload: true
 
   handlers:
     - name: Reload firewalld
