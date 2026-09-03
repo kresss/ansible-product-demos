@@ -119,6 +119,10 @@
       retries: 5
       delay: 5
 
+    - name: Debug virsh_output
+      ansible.builtin.debug:
+        msg: "{{ virsh_output.stdout_lines[2] }}"
+
     - name: Parse and set the VM IP address from virsh output
       ansible.builtin.set_fact:
         vm_ip: "{{ (virsh_output.stdout_lines[2] | regex_search('\\b(?:[0-9]{1,3}\\\\.){3}[0-9]{1,3}\\b')) }}"
