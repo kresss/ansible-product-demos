@@ -26,7 +26,7 @@
         state: absent
 
     - name: Check if the VM is defined
-      ansible.builtin.command: virsh domstate my-vm
+      ansible.builtin.command: virsh domstate {{ vm_name }}
       register: vm_check
       failed_when: false
       changed_when: false
