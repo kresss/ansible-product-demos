@@ -15,34 +15,19 @@
           - vm_name != ''
           - vm_name != 'undef'
 
-    - name: Clean up the Temp VM image file if it exists
-      ansible.builtin.file:
-        path: "/tmp/my_os_image.qcow2"
-        state: absent
-
-    - name: Clean up the VM Definition XML file if it exists
-      ansible.builtin.file:
-        path: "/tmp/{{ vm_name }}.xml"
-        state: absent
-
-    - name: Check if the VM is defined
+    - name: Check the execution state of the VM
       ansible.builtin.command: virsh domstate {{ vm_name }}
-      register: vm_check
+      register: vm_state_check
       failed_when: false
       changed_when: false
 
-    - name: Debug the result (Optional)
-      ansible.builtin.debug:
-        msg: "VM is defined"
-      when: vm_check.rc == 0
+    - name: Set a boolean fact for readability
+      ansible.builtin.set_fact:
+        is_vm_defined: "{{ vm_check.rc == 0 }}"
+        is_vm_running: "{{ vm_state_check.rc == 0 and 'running' in vm_state_check.stdout }}"
 
-    - name: Debug if VM is missing (Optional)
-      ansible.builtin.debug:
-        msg: "VM is NOT defined"
-      when: vm_check.rc != 0
-
-    - name: Cleanup Libvirt and Network Resources for the VM
-      when: vm_check.rc == 0
+    - name: Cleanup VM Networking if VM is Running
+      when: is_vm_running
       block:
         - name: Gather DHCP IP address of the VM
           ansible.builtin.command: >
@@ -70,15 +55,28 @@
             permanent: true
             state: absent
           notify: Reload firewalld
-
+    
+    - name: Stop and Undefine the VM if it is defined
+      when: is_vm_defined
+      block:
         - name: Stop the VM
           ansible.builtin.command:
             cmd: "virsh stop {{ vm_name }}"
-          when: vm_check.rc == 0
+          when: is_vm_running
 
         - name: Undefine the VM in libvirt using virsh
           ansible.builtin.command:
             cmd: "virsh undefine {{ vm_name }}"
+
+    - name: Clean up the Temp VM image file if it exists
+      ansible.builtin.file:
+        path: "/tmp/my_os_image.qcow2"
+        state: absent
+
+    - name: Clean up the VM Definition XML file if it exists
+      ansible.builtin.file:
+        path: "/tmp/{{ vm_name }}.xml"
+        state: absent
 
     - name: Cleanup vm image file if it exists
       ansible.builtin.file:
