@@ -53,9 +53,10 @@
               register: arp_output
               # Loop configuration: Retries every 5 seconds for up to 1 minute
               until: arp_output.stdout | trim != ""
-              retries: 12
+              retries: 3
               delay: 5
               changed_when: false
+              failed_when:: false
 
             - name: Store the found IP address
               ansible.builtin.set_fact:
