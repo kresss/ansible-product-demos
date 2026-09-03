@@ -61,9 +61,6 @@
         object: "{{ aws_object_key }}"
         dest: "/tmp/my_os_image.qcow2"
         mode: get
-        # AWS Authentication (optional if environment variables or IAM roles are configured)
-        aws_access_key: "{{ aws_access_key_id }}"
-        aws_secret_key: "{{ aws_secret_access_key }}"
         region: "{{ aws_region }}"
 
     - name: Get MD5 checksum of a file
