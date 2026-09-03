@@ -80,6 +80,13 @@
     #   args:
     #     executable: /bin/bash
 
+    - name: Check if the VM is already defined
+      ansible.builtin.command:
+        cmd: "virsh dominfo {{ vm_name }}"
+      register: vm_definition_check
+      failed_when: false
+      changed_when: false
+
     - name: Define the VM
       ansible.builtin.template:
         src: "templates/nested_vm_def.xml.j2"
@@ -89,7 +96,8 @@
     - name: Define the VM in libvirt using virsh
       ansible.builtin.command:
         cmd: "virsh define /tmp/{{ vm_name }}.xml"
-
+      when: vm_definition_check.rc != 0
+      
     - name: Start the VM
       ansible.builtin.command:
         cmd: "virsh start {{ vm_name }}"
