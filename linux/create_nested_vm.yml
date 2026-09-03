@@ -97,10 +97,18 @@
       ansible.builtin.command:
         cmd: "virsh define /tmp/{{ vm_name }}.xml"
       when: vm_definition_check.rc != 0
-      
+
+    - name: Check if the VM is already started
+      ansible.builtin.command:
+        cmd: "virsh domstate {{ vm_name }}"
+      register: vm_state_check
+      failed_when: false
+      changed_when: false
+
     - name: Start the VM
       ansible.builtin.command:
         cmd: "virsh start {{ vm_name }}"
+      when: vm_state_check.stdout | trim != 'running'
 
     - name: Gather DHCP IP address of the VM
       ansible.builtin.command: >
