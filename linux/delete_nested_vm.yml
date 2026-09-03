@@ -32,7 +32,7 @@
         - name: Get the VM MAC address from libvirt
           ansible.builtin.shell: |
             set -o pipefail
-            virsh domiflist my-vm | awk 'NR>2 {print $5}' | head -n 1
+            virsh domiflist {{ vm_name }} | awk 'NR>2 {print $5}' | head -n 1
           args:
             executable: /bin/bash
           register: vm_mac
@@ -45,7 +45,7 @@
                 set -o pipefail
                 # Ping the network broadcast or check neighbors to wake up stale entries
                 ip neighbor show > /dev/null
-                
+
                 # Search the local ARP / Neighbor cache for the specific MAC address
                 ip neighbor show | grep -i "{{ vm_mac.stdout | trim }}" | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}'
               args:
