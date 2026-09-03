@@ -6,6 +6,8 @@
   vars:
     host_port: "{{ _host_port | default(8080) }}"
     vm_port: "{{ _vm_port | default(80) }}"
+    aws_access_key_id: "{{ lookup('ansible.builtin.env', 'AWS_ACCESS_KEY_ID') }}"
+    aws_secret_access_key: "{{ lookup('ansible.builtin.env', 'AWS_SECRET_ACCESS_KEY') }}"
 
   tasks:
     - name: Check for vars
@@ -14,15 +16,6 @@
           - vm_name is defined
           - vm_name != ''
           - vm_name != 'undef'
-          # - vm_os_image is defined
-          # - vm_os_image != ''
-          # - vm_os_image != 'undef'
-          - rhsm_org_id is defined
-          - rhsm_activation_key is defined
-          - rhsm_org_id != 'REPLACEME'
-          - rhsm_activation_key != 'REPLACEME'
-          - rhsm_org_id | length > 0
-          - rhsm_activation_key | length > 0
           - aws_bucket is defined
           - aws_bucket != ''
           - aws_bucket | length > 0
