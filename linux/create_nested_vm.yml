@@ -6,8 +6,6 @@
   vars:
     host_port: "{{ _host_port | default(8080) }}"
     vm_port: "{{ _vm_port | default(80) }}"
-    aws_access_key_id: "{{ lookup('ansible.builtin.env', 'AWS_ACCESS_KEY_ID') }}"
-    aws_secret_access_key: "{{ lookup('ansible.builtin.env', 'AWS_SECRET_ACCESS_KEY') }}"
 
   tasks:
     - name: Check for vars
@@ -22,12 +20,6 @@
           - aws_object_key is defined
           - aws_object_key != ''
           - aws_object_key | length > 0
-          - aws_access_key_id is defined
-          - aws_access_key_id != ''
-          - aws_access_key_id | length > 0
-          - aws_secret_access_key is defined
-          - aws_secret_access_key != ''
-          - aws_secret_access_key | length > 0
           - aws_region is defined
           - aws_region != ''
           - aws_region | length > 0
