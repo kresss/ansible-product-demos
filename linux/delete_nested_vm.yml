@@ -34,6 +34,9 @@
             virsh domifaddr --domain {{ vm_name }}
           register: virsh_output
           changed_when: false
+          until: virsh_output.stdout_lines | length >= 3
+          retries: 5
+          delay: 5
 
         - name: Debug domifaddr
           ansible.builtin.debug:
