@@ -44,7 +44,7 @@
 
         - name: Parse and set the VM IP address from virsh output
           ansible.builtin.set_fact:
-            vm_ip: "{{ (virsh_output.stdout | regex_search('\\b(?:[0-9]{1,3}\\\\.){3}[0-9]{1,3}\\b')) }}"
+            vm_ip: "{{ virsh_output.stdout | regex_search('[0-9]{1,3}(?:[.][0-9]{1,3}){3}') }}"
 
         - name: Debug vm_ip 
           ansible.builtin.debug:
@@ -55,13 +55,24 @@
             msg: "Could not find a DHCP IP address for VM: {{ vm_name }}. Ensure the VM is running."
           when: vm_ip is none or vm_ip == ""
 
+        - name: Check port forwarding from host to VM
+          ansible.builtin.command:
+            cmd: >-
+              firewall-cmd --zone=public
+              --query-forward-port=port={{ host_port }}:proto=tcp:toport={{ vm_port }}:toaddr={{ vm_ip }}
+          register: port_forwarding_check
+          changed_when: false
+          failed_when: false
+
         - name: Un-Configure port forwarding from host to VM
-          ansible.posix.firewalld:
-            zone: "public"
-            forward_port: "port={{ host_port }}:proto=tcp:toport={{ vm_port }}:toaddr={{ vm_ip }}"
-            permanent: true
-            state: absent
-          when: vm_ip is defined and vm_ip != ""
+          ansible.builtin.command:
+            cmd: >-
+              firewall-cmd --zone=public
+              --remove-forward-port=port={{ host_port }}:proto=tcp:toport={{ vm_port }}:toaddr={{ vm_ip }}
+              --permanent
+          when:
+            - vm_ip is defined and vm_ip != ""
+            - port_forwarding_check.rc == 0
           notify: Reload firewalld
 
     - name: Stop and Undefine the VM if it is defined
