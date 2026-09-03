@@ -600,6 +600,31 @@ controller_templates:
           type: text
           variable: vm_os_image
           required: true
+  - name: "LINUX | Delete Nested VM"
+    job_type: run
+    inventory: Ansible Product Demos Inventory
+    project: "Ansible Product Demos"
+    playbook: "linux/delete_nested_vm.yml"
+    notification_templates_started: Telemetry
+    notification_templates_success: Telemetry
+    notification_templates_error: Telemetry
+    use_fact_cache: true
+    credentials:
+      - APD Machine Credential
+    survey_enabled: true
+    survey:
+      name: ''
+      description: ''
+      spec:
+        - question_name: Server Name or Pattern
+          type: text
+          variable: _hosts
+          required: true
+        - question_name: Nested VM Name
+          type: text
+          variable: vm_name
+          required: true
+          default: my_nested_vm
 
 controller_workflows:
   - name: "Linux | Compliance Workflow"
