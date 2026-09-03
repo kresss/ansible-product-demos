@@ -143,6 +143,14 @@
         - http
       notify: Reload firewalld
 
+    - name: Allow TCP port 8080 through the host firewall
+      ansible.posix.firewalld:
+        zone: public
+        port: 8080/tcp
+        permanent: true
+        state: enabled
+      notify: Reload firewalld
+
     - name: Configure port forwarding from host to VM
       ansible.posix.firewalld:
         zone: public
