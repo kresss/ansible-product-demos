@@ -15,59 +15,78 @@
           - vm_name != ''
           - vm_name != 'undef'
 
-    - name: Clean up the VM image file if it exists
+    - name: Clean up the Temp VM image file if it exists
       ansible.builtin.file:
         path: "/tmp/my_os_image.qcow2"
-        state: absent    
+        state: absent
 
     - name: Clean up the VM Definition XML file if it exists
       ansible.builtin.file:
         path: "/tmp/{{ vm_name }}.xml"
         state: absent
 
-    - name: Gather DHCP IP address of the VM
-      ansible.builtin.command: >
-        virsh domifaddr {{ vm_name }} --source dhcp
-      register: virsh_output
+    - name: Check if the VM is defined
+      ansible.builtin.command: virsh domstate my-vm
+      register: vm_check
+      failed_when: false
       changed_when: false
 
-    - name: Display the discovered VM IP address
+    - name: Debug the result (Optional)
       ansible.builtin.debug:
-        msg: "Discovered IP for {{ vm_name }} is {{ vm_ip }}"
+        msg: "VM is defined"
+      when: vm_check.rc == 0
 
-    - name: Stop the VM
-      ansible.builtin.command:
-        cmd: "virsh stop {{ vm_name }}"
+    - name: Debug if VM is missing (Optional)
+      ansible.builtin.debug:
+        msg: "VM is NOT defined"
+      when: vm_check.rc != 0
 
-    - name: Undefine the VM in libvirt using virsh
-      ansible.builtin.command:
-        cmd: "virsh undefine {{ vm_name }}"
+    - name: Cleanup Libvirt and Network Resources for the VM
+      when: vm_check.rc == 0
+      block:
+        - name: Gather DHCP IP address of the VM
+          ansible.builtin.command: >
+            virsh domifaddr {{ vm_name }} --source dhcp
+          register: virsh_output
+          changed_when: false
+
+        - name: Parse and set the VM IP address from virsh output
+          ansible.builtin.set_fact:
+            vm_ip: "{{ (virsh_output.stdout | regex_search('\\b(?:[0-9]{1,3}\\\\.){3}[0-9]{1,3}\\b')) }}"
+
+        - name: Display the discovered VM IP address
+          ansible.builtin.debug:
+            msg: "Discovered IP for {{ vm_name }} is {{ vm_ip }}"
+
+        - name: Fail if VM IP address could not be found
+          ansible.builtin.fail:
+            msg: "Could not find a DHCP IP address for VM: {{ vm_name }}. Ensure the VM is running."
+          when: vm_ip is none or vm_ip == ""
+
+        - name: Un-Configure port forwarding from host to VM
+          ansible.posix.firewalld:
+            zone: "public"
+            forward_port: "port={{ host_port }}:proto=tcp:toport={{ vm_port }}:toaddr={{ vm_ip }}"
+            permanent: true
+            state: absent
+          notify: Reload firewalld
+
+        - name: Stop the VM
+          ansible.builtin.command:
+            cmd: "virsh stop {{ vm_name }}"
+          when: vm_check.rc == 0
+
+        - name: Undefine the VM in libvirt using virsh
+          ansible.builtin.command:
+            cmd: "virsh undefine {{ vm_name }}"
 
     - name: Cleanup vm image file if it exists
       ansible.builtin.file:
         path: "/var/lib/libvirt/images/{{ vm_name }}.qcow2"
         state: absent
 
-    - name: Parse and set the VM IP address from virsh output
-      ansible.builtin.set_fact:
-        vm_ip: "{{ (virsh_output.stdout | regex_search('\\b(?:[0-9]{1,3}\\\\.){3}[0-9]{1,3}\\b')) }}"
-
-    - name: Fail if VM IP address could not be found
-      ansible.builtin.fail:
-        msg: "Could not find a DHCP IP address for VM: {{ vm_name }}. Ensure the VM is running."
-      when: vm_ip is none or vm_ip == ""
-
-    - name: Un-Configure port forwarding from host to VM
-      ansible.posix.firewalld:
-        zone: "public"
-        forward_port: "port={{ host_port }}:proto=tcp:toport={{ vm_port }}:toaddr={{ vm_ip }}"
-        permanent: true
-        state: absent
-      notify: Reload firewalld
-
   handlers:
     - name: Reload firewalld
       ansible.builtin.systemd:
         name: firewalld
         state: reloaded
-        
