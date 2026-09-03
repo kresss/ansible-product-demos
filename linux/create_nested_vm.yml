@@ -54,6 +54,17 @@
         dest: "/tmp/my_os_image.qcow2"
         mode: "0644"
 
+    - name: Get MD5 checksum of a file
+      ansible.builtin.stat:
+        path: "/tmp/my_os_image.qcow2"
+        checksum_algorithm: md5
+      register: file_stat
+
+    - name: Display the MD5 checksum
+      ansible.builtin.debug:
+        msg: "The MD5 checksum is {{ file_stat.stat.checksum }}"
+      when: file_stat.stat.exists
+
     - name: Copy image to libvirt directory
       ansible.builtin.copy:
         src: "/tmp/my_os_image.qcow2"
