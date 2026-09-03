@@ -132,12 +132,17 @@
         msg: "Could not find a DHCP IP address for VM: {{ vm_name }}. Ensure the VM is running."
       when: vm_ip is none or vm_ip == ""
 
+    - name: Check IP masquerading on the host firewall
+      ansible.builtin.command:
+        cmd: "firewall-cmd --zone=public --query-masquerade"
+      register: masquerade_check
+      changed_when: false
+      failed_when: false
+
     - name: Enable IP masquerading on the host firewall
-      ansible.posix.firewalld:
-        zone: "public"
-        masquerade: true
-        permanent: true
-        state: enabled
+      ansible.builtin.command:
+        cmd: "firewall-cmd --zone=public --add-masquerade --permanent"
+      when: masquerade_check.rc != 0
       notify: Reload firewalld
 
     - name: Check port forwarding from host to VM
