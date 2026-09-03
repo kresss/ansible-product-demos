@@ -76,7 +76,7 @@
       block:
         - name: Stop the VM
           ansible.builtin.command:
-            cmd: "virsh stop {{ vm_name }}"
+            cmd: "virsh shutdown {{ vm_name }}"
           when: is_vm_running
 
         - name: Undefine the VM in libvirt using virsh
