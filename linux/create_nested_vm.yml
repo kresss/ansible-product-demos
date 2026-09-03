@@ -48,11 +48,23 @@
         groups: libvirt
         append: true
 
-    - name: Download VM OS Image
-      ansible.builtin.get_url:
-        url: "{{ vm_os_image }}"
+    # - name: Download VM OS Image
+    #   ansible.builtin.get_url:
+    #     url: "{{ vm_os_image }}"
+    #     dest: "/tmp/my_os_image.qcow2"
+    #     mode: "0644"
+
+
+    - name: Download a file from S3 bucket
+      amazon.aws.s3_object:
+        bucket: "{{ aws_bucket }}"
+        object: "{{ aws_object_key }}"
         dest: "/tmp/my_os_image.qcow2"
-        mode: "0644"
+        mode: get
+        # AWS Authentication (optional if environment variables or IAM roles are configured)
+        aws_access_key: "{{ aws_access_key_id }}"
+        aws_secret_key: "{{ aws_secret_access_key }}"
+        region: "{{ aws_region }}"
 
     - name: Get MD5 checksum of a file
       ansible.builtin.stat:
