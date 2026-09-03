@@ -582,8 +582,6 @@ controller_templates:
     use_fact_cache: true
     credentials:
       - APD Machine Credential
-      - RHSM Registration
-      - AWS
     survey_enabled: true
     survey:
       name: ''
@@ -598,17 +596,9 @@ controller_templates:
           variable: vm_name
           required: true
           default: my_nested_vm
-        - question_name: AWS Region to download the VM OS image from S3 bucket
+        - question_name: Nested VM OS Image URL
           type: text
-          variable: aws_region
-          required: true
-        - question_name: S3 Bucket Name
-          type: text
-          variable: aws_bucket
-          required: true
-        - question_name: S3 Object Key
-          type: text
-          variable: aws_object_key
+          variable: vm_os_image
           required: true
 
 controller_workflows:
