@@ -146,7 +146,11 @@
     - name: Configure port forwarding from host to VM
       ansible.posix.firewalld:
         zone: public
-        port_forward: "port={{ host_port }}:proto=tcp:toport={{ vm_port }}:toaddr={{ vm_ip }}"
+        port_forward: 
+          - port: "{{ host_port }}"
+            proto: tcp
+            toaddr: "{{ vm_ip }}"
+            toport: "{{ vm_port }}"
         permanent: true
         state: enabled
       notify: Reload firewalld
