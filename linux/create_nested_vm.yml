@@ -96,7 +96,7 @@
 
     - name: Gather DHCP IP address of the VM
       ansible.builtin.command: >
-        virsh domifaddr {{ vm_name }}
+        virsh domifaddr --domain {{ vm_name }}
       register: virsh_output
       changed_when: false
 
