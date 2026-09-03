@@ -99,6 +99,9 @@
         virsh domifaddr --domain {{ vm_name }}
       register: virsh_output
       changed_when: false
+      until: virsh_output.stdout_lines | length >= 3
+      retries: 5
+      delay: 5
 
     - name: Parse and set the VM IP address from virsh output
       ansible.builtin.set_fact:
