@@ -23,7 +23,7 @@
 
     - name: Set a boolean fact for readability
       ansible.builtin.set_fact:
-        is_vm_defined: "{{ vm_check.rc == 0 }}"
+        is_vm_defined: "{{ vm_state_check.rc == 0 }}"
         is_vm_running: "{{ vm_state_check.rc == 0 and 'running' in vm_state_check.stdout }}"
 
     - name: Cleanup VM Networking if VM is Running
@@ -55,7 +55,7 @@
             permanent: true
             state: absent
           notify: Reload firewalld
-    
+  
     - name: Stop and Undefine the VM if it is defined
       when: is_vm_defined
       block:
