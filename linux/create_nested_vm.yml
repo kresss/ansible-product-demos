@@ -140,12 +140,22 @@
         state: enabled
       notify: Reload firewalld
 
+    - name: Check port forwarding from host to VM
+      ansible.builtin.command:
+        cmd: >-
+          firewall-cmd --zone=public
+          --query-forward-port=port={{ host_port }}:proto=tcp:toport={{ vm_port }}:toaddr={{ vm_ip }}
+      register: port_forwarding_check
+      changed_when: false
+      failed_when: false
+
     - name: Configure port forwarding from host to VM
-      ansible.posix.firewalld:
-        zone: "public"
-        forward_port: "port={{ host_port }}:proto=tcp:toport={{ vm_port }}:toaddr={{ vm_ip }}"
-        permanent: true
-        state: enabled
+      ansible.builtin.command:
+        cmd: >-
+          firewall-cmd --zone=public
+          --add-forward-port=port={{ host_port }}:proto=tcp:toport={{ vm_port }}:toaddr={{ vm_ip }}
+          --permanent
+      when: port_forwarding_check.rc != 0
       notify: Reload firewalld
 
     - name: Enable IPv4 forwarding in sysctl
