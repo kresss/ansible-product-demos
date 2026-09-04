@@ -4,7 +4,7 @@
   become: true
 
   vars:
-    host_port: "{{ _host_port | default(8080) }}"
+    host_port: "{{ _host_port | default(80) }}"
     vm_port: "{{ _vm_port | default(80) }}"
 
   tasks:
