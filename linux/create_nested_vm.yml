@@ -172,7 +172,7 @@
     - name: Restart Virt Stack
       when: hook_template_result.changed or vm_define_result.changed or vm_start_result.changed
       block:
-        - name: Stop VM # noqa: command-instead-of-module no-changed-when
+        - name: Stop VM  # noqa: command-instead-of-module no-changed-when
           ansible.builtin.command:
             cmd: "virsh destroy {{ vm_name }}"
 
@@ -186,6 +186,6 @@
             name: libvirtd
             state: started
 
-        - name: Start VM # noqa: command-instead-of-module no-changed-when
+        - name: Start VM  # noqa: command-instead-of-module no-changed-when
           ansible.builtin.command:
             cmd: "virsh start {{ vm_name }}"
