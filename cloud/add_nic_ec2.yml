@@ -1,0 +1,10 @@
+---
+- name: Add NIC to ec2 instances
+  hosts: "{{ _hosts | default(omit) }}"
+  gather_facts: false
+
+  tasks:
+    - name: Include snapshot role
+      ansible.builtin.include_role:
+        name: "demo.cloud.aws"
+        tasks_from: add_nic_ec2
