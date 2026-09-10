@@ -1,0 +1,92 @@
+---
+# parameters
+# subnet_name: subnet name to add the NIC to, e.g. subnet-0a1b2c3d4e5f6g7h8
+# security_group_name: security group name to add the NIC to, e.g. sg-0a1b2c3d4e5f6g7h8
+- name: AWS | Add NIC to VM
+  delegate_to: localhost
+  block:
+    - name: AWS | Add NIC | assert required vars
+      ansible.builtin.assert:
+        that:
+          - instance_id is defined
+          - aws_region is defined
+          - subnet_name is defined
+          - security_group_name is defined
+        fail_msg: "instance_id, aws_region is required for add extra nic operations"
+
+    - name: AWS | Add NIC | Get subnet info
+      amazon.aws.ec2_vpc_subnet_info:
+        region: "{{ aws_region }}"
+        filters:
+          "tag:Name": "{{ subnet_name }}"
+      register: register_aws_subnet
+      when: subnet_id is not defined
+
+    - name: AWS | Add NIC | Save subnet id
+      ansible.builtin.set_fact:
+        subnet_id: "{{ register_aws_subnet.subnets | map(attribute='id') | list | last }}"
+      when: subnet_id is not defined
+
+    - name: AWS | Add NIC | Get security group info
+      amazon.aws.ec2_security_group_info:
+        region: "{{ aws_region }}"
+        filters:
+          "tag:Name": "{{ security_group_name }}"
+      register: register_aws_security_group
+      when: security_group_ids is not defined
+
+    - name: AWS | Add NIC | Get existing network interfaces
+      amazon.aws.ec2_eni_info:
+        region: "{{ aws_region }}"
+        filters:
+          "attachment.instance-id": "{{ instance_id }}"
+      register: existing_enis
+
+    - name: AWS | Add NIC | Save security group ids
+      ansible.builtin.set_fact:
+        security_group_ids: "{{ register_aws_security_group.security_groups | map(attribute='group_id') | list }}"
+      when: security_group_ids is not defined
+
+    - name: AWS | Add NIC | Create new network interface
+      amazon.aws.ec2_eni:
+        region: "{{ aws_region }}"
+        subnet_id: "{{ subnet_id }}"
+        security_groups: "{{ security_group_ids }}"
+        instance_id: "{{ instance_id }}"
+        state: present
+        attached: true
+        device_index: "{{ existing_enis.network_interfaces | length }}"
+        source_dest_check: false
+        secondary_private_ip_addresses: "{{ secondary_ips | default(['10.0.1.150', '10.0.1.151']) }}"
+      register: new_eni
+
+    # NOTE: This will change the IP Address of the system in the inventory.
+    - name: AWS | Add NIC | Get primary ENI ID
+      ansible.builtin.set_fact:
+        primary_eni_id: "{{ (existing_enis.network_interfaces | selectattr('attachment.device_index', 'equalto', 0) | list | first).network_interface_id }}"
+
+    - name: AWS | Add NIC | Allocate and associate Elastic IP to primary ENI
+      amazon.aws.ec2_eip:
+        region: "{{ aws_region }}"
+        device_id: "{{ primary_eni_id }}"
+        in_vpc: true
+        state: present
+      register: primary_eip
+
+    - name: AWS | Add NIC | Allocate and associate EIPs to secondary private IPs
+      amazon.aws.ec2_eip:
+        region: "{{ aws_region }}"
+        device_id: "{{ new_eni.interface.id }}"
+        private_ip_address: "{{ item.private_ip_address }}"
+        in_vpc: true
+        state: present
+      loop: "{{ new_eni.interface.private_ip_addresses }}"
+      when: not item.primary_address  # Skip the primary IP of the secondary ENI if you only want EIPs on secondary IPs
+      register: secondary_eips
+
+    - name: AWS | Reboot EC2 instance
+      amazon.aws.ec2_instance:
+        region: "{{ aws_region }}"
+        instance_ids:
+          - "{{ instance_id }}"
+        state: restarted

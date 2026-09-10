@@ -363,6 +363,82 @@ controller_templates:
           default: t3a.medium
           required: true
 
+  - name: Cloud | AWS | Enable Nested Virt EC2
+    job_type: run
+    organization: Ansible Product Demos (APD)
+    credentials:
+      - AWS
+      - AAP Credential
+    project: Ansible Product Demos
+    playbook: cloud/enable_virt_ec2.yml
+    inventory: Ansible Product Demos Inventory
+    notification_templates_started: Telemetry
+    notification_templates_success: Telemetry
+    notification_templates_error: Telemetry
+    use_fact_cache: true
+    survey_enabled: true
+    survey:
+      name: ''
+      description: ''
+      spec:
+        - question_name: AWS Region
+          type: multiplechoice
+          variable: aws_region
+          required: true
+          default: us-east-1
+          choices:
+            - us-east-1
+            - us-east-2
+            - us-west-1
+            - us-west-2
+        - question_name: Specify target hosts
+          type: text
+          variable: _hosts
+          required: true
+
+  - name: Cloud | AWS | Add NIC to EC2
+    job_type: run
+    organization: Ansible Product Demos (APD)
+    credentials:
+      - AWS
+      - AAP Credential
+    project: Ansible Product Demos
+    playbook: cloud/add_nic_ec2.yml
+    inventory: Ansible Product Demos Inventory
+    notification_templates_started: Telemetry
+    notification_templates_success: Telemetry
+    notification_templates_error: Telemetry
+    survey_enabled: true
+    survey:
+      name: ''
+      description: ''
+      spec:
+        - question_name: AWS Region
+          type: multiplechoice
+          variable: aws_region
+          required: true
+          default: us-east-1
+          choices:
+            - us-east-1
+            - us-east-2
+            - us-west-1
+            - us-west-2
+        - question_name: Specify target hosts
+          type: text
+          variable: _hosts
+          required: true
+        - question_name: Specify target subnet
+          type: text
+          variable: subnet_name
+          required: true
+          default: aws-test-subnet
+        - question_name: Specify target security group
+          type: text
+          variable: security_group_name
+          required: true
+          default: aws-test-sg
+
+
 controller_notifications:
   - name: Telemetry
     organization: Ansible Product Demos (APD)

@@ -1,0 +1,72 @@
+---
+- name: AWS | Enable Nested Virt on EC2 Instance
+  delegate_to: localhost
+
+  vars:
+    allocate_secondary_ip: true
+    secondary_ip_qty: 2
+    python_sub_ver: ".12"
+
+  block:
+    - name: AWS | ENABLE VIRT EC2 | assert required vars
+      ansible.builtin.assert:
+        that:
+          - instance_id is defined
+          - aws_region is defined
+        fail_msg: "instance_id, aws_region is required for resize operations"
+
+    - name: AWS | ENABLE VIRT EC2 | shutdown instance
+      amazon.aws.ec2_instance:
+        instance_ids: "{{ instance_id }}"
+        region: "{{ aws_region }}"
+        state: stopped
+        wait: true
+
+    # NOTE: This calls out a specific version of python because the Demo EE uses a default of 3.9 and boto3
+    # is installed in 3.12 as of today.
+    - name: AWS | ENABLE VIRT EC2 | Modify CPU options to enable nested virtualization via boto3
+      ansible.builtin.command:
+        cmd: >
+          python3{{ python_sub_ver | default(omit) }} -c "import boto3; client = boto3.client('ec2', region_name='{{ aws_region }}');
+          client.modify_instance_cpu_options(InstanceId='{{ instance_id }}', NestedVirtualization='enabled')"
+      register: cpu_modify
+      changed_when: cpu_modify.rc == 0
+
+    - name: AWS | ENABLE VIRT EC2 | Allocate Secondary IPs
+      when: allocate_secondary_ip
+      block:
+        - name: AWS | ENABLE VIRT EC2 | Get existing network interfaces
+          amazon.aws.ec2_eni_info:
+            region: "{{ aws_region }}"
+            filters:
+              "attachment.instance-id": "{{ instance_id }}"
+          register: existing_enis
+
+        - name: AWS | ENABLE VIRT EC2 | Get primary ENI ID
+          ansible.builtin.set_fact:
+            primary_eni_id: "{{ (existing_enis.network_interfaces | selectattr('attachment.device_index', 'equalto', 0) | list | first).network_interface_id }}"
+
+        - name: AWS | ENABLE VIRT EC2 | Add Secondary IPs to Primary ENI
+          amazon.aws.ec2_eni:
+            region: "{{ aws_region }}"
+            eni_id: "{{ primary_eni_id }}"
+            secondary_private_ip_address_count: "{{ secondary_ip_qty }}"
+            state: present
+          register: updated_primary_eni
+
+        - name: AWS | ENABLE VIRT EC2 | Add Elastic IPs for Private IPs
+          amazon.aws.ec2_eip:
+            region: "{{ aws_region }}"
+            device_id: "{{ updated_primary_eni.interface.id }}"
+            private_ip_address: "{{ item.private_ip_address }}"
+            in_vpc: true
+            state: present
+          loop: "{{ updated_primary_eni.interface.private_ip_addresses }}"
+          register: secondary_eips
+
+    - name: AWS | ENABLE VIRT EC2 | start instance
+      amazon.aws.ec2_instance:
+        instance_ids: "{{ instance_id }}"
+        region: "{{ aws_region }}"
+        state: started
+        wait: true
