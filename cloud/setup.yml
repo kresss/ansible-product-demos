@@ -492,6 +492,69 @@ controller_templates:
       _report_server: reports
     limit: all
 
+  - name: Cloud | AWS | Create FSx ONTAP
+    job_type: run
+    organization: Ansible Product Demos (APD)
+    credentials:
+      - AWS
+      - ADP Machine Credential
+    project: Ansible Product Demos
+    playbook: cloud/create_fsx_ontap.yml
+    inventory: Ansible Product Demos Inventory
+    notification_templates_started: Telemetry
+    notification_templates_success: Telemetry
+    notification_templates_error: Telemetry
+    extra_vars:
+      create_fsx_ontap_aws_securitygroup_name: aws-test-sg
+      create_fsx_ontap_aws_vpc_subnet_name: aws-test-subnet
+      create_fsx_ontap_stack_name: aws-ontap-stack
+    survey:
+      name: ''
+      description: ''
+      spec:
+        - querstion_name: FSx ONTAP Name
+          question_description: >-
+            Name for the FSx ONTAP file system. Will be used as the value for
+            the EC2 tag key "Name" on the FSx ONTAP file system.
+          type: text
+          variable: create_fsx_ontap_aws_name
+          required: true
+          default: aws-ontap
+        - question_name: AWS Region
+          question_description: >-
+            AWS region where the VPC, keypair, and all VMs will be created.
+          type: multiplechoice
+          variable: create_fsx_ontap_aws_region
+          required: true
+          default: us-east-2
+          choices:
+            - us-east-1
+            - us-east-2
+            - us-west-1
+            - us-west-2
+        - question_name: Owner
+          question_description: >-
+            Value for the EC2 tag key "owner" on all resources this workflow
+            creates. Use your name or team for cost attribution; appears in
+            inventory keyed groups as owner_*.
+          type: text
+          variable: create_fsx_ontap_aws_owner_tag
+          required: true
+          default: your_name
+        - question_name: Environment
+          question_description: >-
+            Value for the EC2 tag key "environment" on each VM (Dev, QA, or
+            Prod). Metadata only—it does not change instance size, patching, or
+            security settings.
+          type: multiplechoice
+          variable: create_fsx_ontap_aws_environment
+          required: true
+          default: Prod
+          choices:
+            - Dev
+            - QA
+            - Prod
+
 controller_workflows:
   - name: Deploy Cloud Stack in AWS
     description: A workflow to deploy a cloud stack

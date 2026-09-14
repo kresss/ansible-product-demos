@@ -1,0 +1,84 @@
+---
+- name: Force APD inventory tag strings
+  ansible.builtin.set_fact:
+    create_fsx_ontap_aws_apd_managed_by: aap-product-demos
+    create_vm_apd_demo_tag: "true"
+
+- name: Get subnet info
+  amazon.aws.ec2_vpc_subnet_info:
+    region: "{{ create_fsx_ontap_aws_region }}"
+    filters:
+      "tag:Name": "{{ create_fsx_ontap_aws_vpc_subnet_name }}"
+  register: create_fsx_ontap_aws_subnet
+  when: create_fsx_ontap_aws_subnet_id is not defined
+
+- name: Save subnet id
+  ansible.builtin.set_fact:
+    create_fsx_ontap_aws_subnet_id: "{{ create_fsx_ontap_aws_subnet.subnets | map(attribute='id') | list | last }}"
+  when: create_fsx_ontap_aws_subnet_id is not defined
+
+- name: Get Security Group info
+  amazon.aws.ec2_security_group_info:
+    region: "{{ create_fsx_ontap_aws_region }}"
+    filters:
+      "tag:Name": "{{ create_fsx_ontap_aws_securitygroup_name }}"
+  register: create_fsx_ontap_aws_securitygroup
+  when: create_fsx_ontap_aws_securitygroup_id is not defined
+
+- name: Save Security Group id
+  ansible.builtin.set_fact:
+    create_fsx_ontap_aws_securitygroup_id: "{{ create_fsx_ontap_aws_securitygroup.security_groups | map(attribute='group_id') | list | last }}"
+  when: create_fsx_ontap_aws_securitygroup_id is not defined
+
+- name: Deploy FSx ONTAP CloudFormation Stack
+  amazon.aws.cloudformation:
+    stack_name: "{{ create_fsx_ontap_stack_name }}"
+    state: present
+    region: "{{ create_fsx_ontap_region }}"
+    template_body: |
+      AWSTemplateFormatVersion: '2010-09-09'
+      Resources:
+        FSxFileSystem:
+          Type: AWS::FSx::FileSystem
+          Properties:
+            FileSystemType: ONTAP
+            SecurityGroupIds:
+              - "{{ create_fsx_ontap_aws_securitygroup_id }}"
+            StorageCapacity: "{{ create_fsx_ontap_storage_capacity | default(1024) }}"
+            SubnetIds:
+              - "{{ create_fsx_ontap_aws_subnet_id }}"
+            ONTAPConfiguration:
+              DeploymentType: "{{ create_fsx_ontap_deployment_type | default('SINGLE_AZ_1') }}"
+              ThroughputCapacity: "{{ create_fsx_ontap_throughput_capacity | default(128) }}"
+              PreferredSubnetId: "{{ create_fsx_ontap_aws_subnet_id }}"
+              FsxAdminPassword: "{{ create_fsx_ontap_admin_password | default(ansible_password) }}"
+            Tags:
+              - Key: Name
+                Value: "{{ create_fsx_ontap_aws_name }}"
+      Outputs:
+        ManagementEndpointIP:
+          Description: "Management IP for ONTAP REST API"
+          Value: !Select [0, !GetAtt FSxFileSystem.OntapConfiguration.Endpoints.Management.IpAddresses]
+        ManagementDNSName:
+          Description: "Management DNS Name"
+          Value: !GetAtt FSxFileSystem.OntapConfiguration.Endpoints.Management.DNSName
+    tags:
+      environment: "{{ create_fsx_ontap_environment | default('demo') }}"
+      deployment: "{{ create_fsx_ontap_deployment | default('demo') }}"
+      owner: "{{ create_fsx_ontap_owner | default('demo') }}"
+      purpose: "{{ create_fsx_ontap_purpose | default('demo') }}"
+      managed-by: "{{ create_fsx_ontap_aws_apd_managed_by }}"
+      apd: "{{ create_vm_apd_demo_tag }}"
+  register: cfn_result
+
+- name: Set Management IP Fact
+  ansible.builtin.set_fact:
+    fsx_mgmt_ip: "{{ cfn_result.stack_outputs.ManagementEndpointIP }}"
+
+- name: Wait for FSx ONTAP Management Endpoint to respond
+  ansible.builtin.wait_for:
+    host: "{{ fsx_mgmt_ip }}"
+    port: 443
+    state: started
+    timeout: 300
+    delay: 10
