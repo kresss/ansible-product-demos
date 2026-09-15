@@ -1,0 +1,56 @@
+---
+- name: Create a Bridge Network Interface on a RHEL Host
+  hosts: "{{ _hosts | default(omit)  }}"
+  become: true
+
+  tasks:
+    # NOTE: This play uses command and shell modules instead of community.libvirt and ansible.posix.nmcli.
+    # This is because they are not in the supported EE. Ideally a custom EE would be created to include these modules.
+    - name: Check for vars
+      ansible.builtin.assert:
+        that:
+          - bridge_name is defined
+          - bridge_name != ''
+          - bridge_name != 'undef'
+          - interface_name is defined
+          - interface_name != ''
+          - interface_name != 'undef'
+        msg: "Required variables not set. Please provide bridge_name and interface_name."
+
+    - name: Create a bridge network interface
+      ansible.builtin.command:
+        cmd: "nmcli connection add type bridge con-name {{ bridge_name }} ifname {{ bridge_name }}"
+        creates: "/etc/sysconfig/network-scripts/ifcfg-{{ bridge_name }}"
+
+    - name: Attach an existing network interface to the bridge
+      ansible.builtin.command:
+        cmd: "nmcli connection add type bridge-slave con-name {{ bridge_name }}-slave ifname {{ interface_name }} master {{ bridge_name }}"
+        creates: "/etc/sysconfig/network-scripts/ifcfg-{{ interface_name }}"
+
+    - name: Create Libvirt network configuration file in a temporary location
+      ansible.builtin.copy:
+        dest: "/tmp/{{ bridge_name }}.xml"
+        owner: root
+        group: root
+        mode: '0644'
+        content: |
+          <network>
+            <name>{{ bridge_name }}</name>
+            <forward mode='bridge'/>
+            <bridge name='{{ bridge_name }}'/>
+          </network>
+
+    - name: Define and start the Libvirt network
+      ansible.builtin.shell:
+        cmd: "virsh net-define /tmp/{{ bridge_name }}.xml && virsh net-start {{ bridge_name }} && virsh net-autostart {{ bridge_name }}"
+        creates: "/etc/libvirt/qemu/networks/{{ bridge_name }}.xml"
+
+    - name: Cleanup temporary network configuration file
+      ansible.builtin.file:
+        path: "/tmp/{{ bridge_name }}.xml"
+        state: absent
+
+  handlers:
+    - name: Restart Bridge Network Interface  # noqa: no-changed-when
+      ansible.builtin.shell:
+        cmd: "nmcli connection down {{ bridge_name }} && nmcli connection up {{ bridge_name }}"
