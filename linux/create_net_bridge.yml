@@ -44,6 +44,8 @@
       ansible.builtin.shell:
         cmd: "virsh net-define /tmp/{{ bridge_name }}.xml && virsh net-start {{ bridge_name }} && virsh net-autostart {{ bridge_name }}"
         creates: "/etc/libvirt/qemu/networks/{{ bridge_name }}.xml"
+      notify:
+        - Restart Bridge Network Interface
 
     - name: Cleanup temporary network configuration file
       ansible.builtin.file:

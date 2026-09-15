@@ -17,6 +17,13 @@
           - vm_os_image is defined
           - vm_os_image != ''
           - vm_os_image != 'undef'
+          - vm_bridge is defined
+          - vm_bridge != ''
+          - vm_bridge != 'undef'
+          - vm_network is defined
+          - vm_network != ''
+          - vm_network != 'undef'
+        msg: "Required variables not set. Please provide vm_name, vm_os_image, and vm_bridge."
 
     - name: Ensure libvirt is installed
       ansible.builtin.dnf:
@@ -103,71 +110,74 @@
       register: vm_start_result
       changed_when: vm_start_result.rc == 0
 
-    - name: Gather DHCP IP address of the VM
-      ansible.builtin.command: >
-        virsh domifaddr --domain {{ vm_name }}
-      register: virsh_output
-      changed_when: false
-      until: virsh_output.stdout_lines | length >= 3
-      retries: 5
-      delay: 5
+    - name: Configure Port Forwarding
+      when: vm_network == 'forwarding'
+      block:
+        - name: Gather DHCP IP address of the VM
+          ansible.builtin.command: >
+            virsh domifaddr --domain {{ vm_name }}
+          register: virsh_output
+          changed_when: false
+          until: virsh_output.stdout_lines | length >= 3
+          retries: 5
+          delay: 5
 
-    - name: Parse and set the VM IP address from virsh output
-      ansible.builtin.set_fact:
-        vm_ip: "{{ virsh_output.stdout_lines[2] | regex_search('[0-9]{1,3}(?:[.][0-9]{1,3}){3}') }}"
-        vm_mac: "{{ virsh_output.stdout_lines[2] | regex_search('([0-9a-fA-F]{2}[:-]){5}([0-9a-fA-F]{2})') }}"
+        - name: Parse and set the VM IP address from virsh output
+          ansible.builtin.set_fact:
+            vm_ip: "{{ virsh_output.stdout_lines[2] | regex_search('[0-9]{1,3}(?:[.][0-9]{1,3}){3}') }}"
+            vm_mac: "{{ virsh_output.stdout_lines[2] | regex_search('([0-9a-fA-F]{2}[:-]){5}([0-9a-fA-F]{2})') }}"
 
-    - name: Fail if VM IP address could not be found
-      ansible.builtin.fail:
-        msg: "Could not find a DHCP IP address for VM: {{ vm_name }}. Ensure the VM is running."
-      when: vm_ip is none or vm_ip == ""
+        - name: Fail if VM IP address could not be found
+          ansible.builtin.fail:
+            msg: "Could not find a DHCP IP address for VM: {{ vm_name }}. Ensure the VM is running."
+          when: vm_ip is none or vm_ip == ""
 
-    - name: Fail if VM MAC address could not be found
-      ansible.builtin.fail:
-        msg: "Could not find a MAC address for VM: {{ vm_name }}. Ensure the VM is running."
-      when: vm_mac is none or vm_mac == ""
+        - name: Fail if VM MAC address could not be found
+          ansible.builtin.fail:
+            msg: "Could not find a MAC address for VM: {{ vm_name }}. Ensure the VM is running."
+          when: vm_mac is none or vm_mac == ""
 
-    - name: Get default libvirt network configuration to check for existing DHCP host reservation
-      ansible.builtin.command: >
-        virsh net-dumpxml default
-      register: dhcp_reservation_check
-      failed_when: false
-      changed_when: false
+        - name: Get default libvirt network configuration to check for existing DHCP host reservation
+          ansible.builtin.command: >
+            virsh net-dumpxml default
+          register: dhcp_reservation_check
+          failed_when: false
+          changed_when: false
 
-    - name: Build the expected DHCP host reservation XML
-      ansible.builtin.set_fact:
-        expected_dhcp_reservation: "<host mac='{{ vm_mac }}' name='{{ vm_name }}' ip='{{ vm_ip }}'/>"
+        - name: Build the expected DHCP host reservation XML
+          ansible.builtin.set_fact:
+            expected_dhcp_reservation: "<host mac='{{ vm_mac }}' name='{{ vm_name }}' ip='{{ vm_ip }}'/>"
 
-    - name: Set fact for if the static DHCP host reservation already exists
-      ansible.builtin.set_fact:
-        vm_reservation_exists: "{{ dhcp_reservation_check.stdout.find(expected_dhcp_reservation) != -1 }}"
+        - name: Set fact for if the static DHCP host reservation already exists
+          ansible.builtin.set_fact:
+            vm_reservation_exists: "{{ dhcp_reservation_check.stdout.find(expected_dhcp_reservation) != -1 }}"
 
-    - name: Add static DHCP host reservation to libvirt network live
-      ansible.builtin.command: >
-        virsh net-update default add ip-dhcp-host "{{ expected_dhcp_reservation }}" --live --config
-      register: virsh_update
-      failed_when:
-        - virsh_update.rc != 0
-        - "'already exists' not in virsh_update.stderr"
-      changed_when: virsh_update.rc == 0
-      when: not vm_reservation_exists
+        - name: Add static DHCP host reservation to libvirt network live
+          ansible.builtin.command: >
+            virsh net-update default add ip-dhcp-host "{{ expected_dhcp_reservation }}" --live --config
+          register: virsh_update
+          failed_when:
+            - virsh_update.rc != 0
+            - "'already exists' not in virsh_update.stderr"
+          changed_when: virsh_update.rc == 0
+          when: not vm_reservation_exists
 
-    - name: Create Libvirt Hook Directory
-      ansible.builtin.file:
-        path: "/etc/libvirt/hooks"
-        state: directory
-        mode: "0755"
-        owner: root
-        group: root
+        - name: Create Libvirt Hook Directory
+          ansible.builtin.file:
+            path: "/etc/libvirt/hooks"
+            state: directory
+            mode: "0755"
+            owner: root
+            group: root
 
-    - name: Create Libvirt Hook for QEMU to create iptables rules
-      ansible.builtin.template:
-        src: "templates/qemu.j2"
-        dest: "/etc/libvirt/hooks/qemu"
-        mode: "0755"
-        owner: root
-        group: root
-      register: hook_template_result
+        - name: Create Libvirt Hook for QEMU to create iptables rules
+          ansible.builtin.template:
+            src: "templates/qemu.j2"
+            dest: "/etc/libvirt/hooks/qemu"
+            mode: "0755"
+            owner: root
+            group: root
+          register: hook_template_result
 
     - name: Restart Virt Stack
       when: hook_template_result.changed or vm_define_result.changed or vm_start_result.changed

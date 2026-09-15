@@ -19,7 +19,7 @@
       <target dev='vda' bus='virtio'/>
     </disk>
     <interface type='network'>
-      <source network='default' bridge='virbr0'/>
+      <source network='default' bridge='{{ vm_bridge }}'/>
       <model type='virtio'/>
     </interface>
     <serial type='pty'>

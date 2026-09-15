@@ -641,6 +641,21 @@ controller_templates:
           type: text
           variable: vm_os_image
           required: true
+        - question_name: Nested VM Bridge
+          type: text
+          variable: vm_bridge
+          required: true
+          default: br0
+        - question_name: Nested VM Networking Type
+          type: multiplechoice
+          variable: vm_network
+          required: true
+          choices:
+            - forwarding
+            - bridge
+          default: bridge
+
+
 
   - name: "LINUX | Create Bridge Network Interface"
     job_type: run
