@@ -94,7 +94,7 @@
       ansible.builtin.command: >
         virt-customize -a /var/lib/libvirt/images/{{ vm_name }}.qcow2
         --hostname {{ vm_name }}
-        --copy-in /tmp/vm.nmconnection:/etc/NetworkManager/system-connections/eth0.nmconnection
+        --copy /tmp/vm.nmconnection:/etc/NetworkManager/system-connections/eth0.nmconnection
         --run-command 'chmod 600 /etc/NetworkManager/system-connections/eth0.nmconnection'
         --selinux-relabel
       when: copy_results.changed
