@@ -74,7 +74,7 @@
 
     - name: Create network configuration file in a temporary location
       ansible.builtin.copy:
-        dest: "/tmp/vm.nmconnection"
+        dest: "/tmp/eth0.nmconnection"
         owner: root
         group: root
         mode: '0644'
@@ -93,7 +93,7 @@
       ansible.builtin.command: >
         virt-customize -a /var/lib/libvirt/images/{{ vm_name }}.qcow2
         --hostname {{ vm_name }}
-        --copy /tmp/vm.nmconnection:/etc/NetworkManager/system-connections/eth0.nmconnection
+        --copy-in /tmp/vm.nmconnection:/etc/NetworkManager/system-connections
         --run-command 'chmod 600 /etc/NetworkManager/system-connections/eth0.nmconnection'
         --selinux-relabel
       register: virt_custom_result
