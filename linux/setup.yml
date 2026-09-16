@@ -646,16 +646,11 @@ controller_templates:
           variable: vm_bridge
           required: true
           default: br0
-        - question_name: Nested VM Networking Type
-          type: multiplechoice
-          variable: vm_network
+        - question_name: Nested VM IP (Secondary Private IP)
+          type: text
+          variable: vm_ip
           required: true
-          choices:
-            - forwarding
-            - bridge
-          default: bridge
-
-
+          default: 10.0.1.x
 
   - name: "LINUX | Create Bridge Network Interface"
     job_type: run

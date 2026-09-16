@@ -56,4 +56,37 @@
         state: present
         attached: true
         device_index: "{{ existing_enis.network_interfaces | length }}"
+        source_dest_check: false
+        secondary_private_ip_addresses: "{{ secondary_ips | default(['10.0.1.150', '10.0.1.151']) }}"
       register: new_eni
+
+    # NOTE: This will change the IP Address of the system in the inventory.
+    - name: AWS | Add NIC | Get primary ENI ID
+      ansible.builtin.set_fact:
+        primary_eni_id: "{{ (existing_enis.network_interfaces | selectattr('attachment.device_index', 'equalto', 0) | list | first).network_interface_id }}"
+
+    - name: AWS | Add NIC | Allocate and associate Elastic IP to primary ENI
+      amazon.aws.ec2_eip:
+        region: "{{ aws_region }}"
+        en_id: "{{ primary_eni_id }}"
+        state: present
+        in_null: false
+      register: primary_eip
+
+    - name: AWS | Add NIC | Allocate and associate EIPs to secondary private IPs
+      amazon.aws.ec2_eip:
+        region: "{{ aws_region }}"
+        en_id: "{{ new_eni.interface.id }}"
+        private_ip_address: "{{ item.private_ip_address }}"
+        state: present
+        in_null: false
+      loop: "{{ new_eni.interface.private_ip_addresses }}"
+      when: not item.primary  # Skip the primary IP of the secondary ENI if you only want EIPs on secondary IPs
+      register: secondary_eips
+
+    - name: AWS | Reboot EC2 instance
+      amazon.aws.ec2_instance:
+        region: "{{ aws_region }}"
+        instance_ids:
+          - "{{ instance_id }}"
+        state: restarted

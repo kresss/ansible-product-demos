@@ -17,15 +17,37 @@
           - interface_name != 'undef'
         msg: "Required variables not set. Please provide bridge_name and interface_name."
 
+    - name: Ensure libvirt and KVM dependencies are installed
+      ansible.builtin.dnf:
+        name:
+          - qemu-kvm
+          - libvirt
+          - virt-install
+        state: present
+
+    - name: Ensure libvirtd service is running and enabled
+      ansible.builtin.service:
+        name: libvirtd
+        state: started
+        enabled: true
+
     - name: Create a bridge network interface
       ansible.builtin.command:
-        cmd: "nmcli connection add type bridge con-name {{ bridge_name }} ifname {{ bridge_name }}"
+        cmd: "nmcli connection add type bridge con-name {{ bridge_name }} ifname {{ bridge_name }} bridge.stp no ipv4.method disabled ipv6.method ignore"
         creates: "/etc/sysconfig/network-scripts/ifcfg-{{ bridge_name }}"
 
     - name: Attach an existing network interface to the bridge
       ansible.builtin.command:
         cmd: "nmcli connection add type bridge-slave con-name {{ bridge_name }}-slave ifname {{ interface_name }} master {{ bridge_name }}"
         creates: "/etc/sysconfig/network-scripts/ifcfg-{{ interface_name }}"
+
+    - name: Bring up bridge connections
+      ansible.builtin.command: nmcli connection up "{{ item }}"
+      loop:
+        - {{ bridge_name }}
+        - {{ bridge_name + "-slave" }}
+      register: nmcli_up
+      changed_when: "'successfully activated' in nmcli_up.stdout"
 
     - name: Create Libvirt network configuration file in a temporary location
       ansible.builtin.copy:
