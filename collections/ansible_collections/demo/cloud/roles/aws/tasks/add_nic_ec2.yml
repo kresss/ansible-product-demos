@@ -71,7 +71,6 @@
         device_id: "{{ primary_eni_id }}"
         in_vpc: true
         state: present
-        in_null: false
       register: primary_eip
 
     - name: AWS | Add NIC | Allocate and associate EIPs to secondary private IPs
@@ -81,7 +80,6 @@
         private_ip_address: "{{ item.private_ip_address }}"
         in_vpc: true
         state: present
-        in_null: false
       loop: "{{ new_eni.interface.private_ip_addresses }}"
       when: not item.primary  # Skip the primary IP of the secondary ENI if you only want EIPs on secondary IPs
       register: secondary_eips
