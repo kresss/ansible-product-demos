@@ -76,8 +76,9 @@
     - name: AWS | Add NIC | Allocate and associate EIPs to secondary private IPs
       amazon.aws.ec2_eip:
         region: "{{ aws_region }}"
-        en_id: "{{ new_eni.interface.id }}"
+        device_id: "{{ new_eni.interface.id }}"
         private_ip_address: "{{ item.private_ip_address }}"
+        in_vpc: true
         state: present
         in_null: false
       loop: "{{ new_eni.interface.private_ip_addresses }}"
