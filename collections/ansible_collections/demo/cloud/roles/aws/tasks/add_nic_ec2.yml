@@ -68,7 +68,8 @@
     - name: AWS | Add NIC | Allocate and associate Elastic IP to primary ENI
       amazon.aws.ec2_eip:
         region: "{{ aws_region }}"
-        en_id: "{{ primary_eni_id }}"
+        device_id: "{{ primary_eni_id }}"
+        in_vpc: true
         state: present
         in_null: false
       register: primary_eip
