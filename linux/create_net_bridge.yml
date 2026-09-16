@@ -44,8 +44,8 @@
     - name: Bring up bridge connections
       ansible.builtin.command: nmcli connection up "{{ item }}"
       loop:
-        - {{ bridge_name }}
-        - {{ bridge_name + "-slave" }}
+        - "{{ bridge_name }}"
+        - "{{ bridge_name + "-slave" }}"
       register: nmcli_up
       changed_when: "'successfully activated' in nmcli_up.stdout"
 
