@@ -88,7 +88,6 @@
           address1={{ vm_ip }},{{ vm_gateway | default('10.0.1.1') }}
           dns={{ vm_dns | default('10.0.0.2') }};
           method=manual
-      when: copy_results.changed
 
     - name: Inject NetworkManager configuration file into guest image
       ansible.builtin.command: >
@@ -97,7 +96,6 @@
         --copy /tmp/vm.nmconnection:/etc/NetworkManager/system-connections/eth0.nmconnection
         --run-command 'chmod 600 /etc/NetworkManager/system-connections/eth0.nmconnection'
         --selinux-relabel
-      when: copy_results.changed
       register: virt_custom_result
       changed_when: virt_custom_result.rc == 0
 
