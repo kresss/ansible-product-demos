@@ -81,7 +81,7 @@
         in_vpc: true
         state: present
       loop: "{{ new_eni.interface.private_ip_addresses }}"
-      when: not item.primary  # Skip the primary IP of the secondary ENI if you only want EIPs on secondary IPs
+      when: not item.primary_address  # Skip the primary IP of the secondary ENI if you only want EIPs on secondary IPs
       register: secondary_eips
 
     - name: AWS | Reboot EC2 instance
