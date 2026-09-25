@@ -13,13 +13,9 @@
     - name: Trigger Rocket Remeidation Template
       condition: event.payload.message == "FIRE 1"
       action:
-        run_playbook:
-          name: playbooks/remediate_issue.yml
-
         run_job_template:
           name: "LINUX | Patching"
           organization: "Ansible Product Demos (APD)"
           job_args:
             extra_vars:
               _hosts: aws_rhel9
-              
