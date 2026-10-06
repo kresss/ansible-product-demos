@@ -712,5 +712,6 @@ eda_event_streams:
   - name: Rocket Event Stream
     credential_name: EDA - AAP Events Stream Credential
     organization: Ansible Product Demos (APD)
+    forward_events: true
 
 ...
