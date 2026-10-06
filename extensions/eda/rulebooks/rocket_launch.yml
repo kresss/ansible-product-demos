@@ -24,4 +24,4 @@
             extra_vars:
               _hosts: aws_rhel9
               compliance_profile: stig
-              use_httpd: false
+              use_httpd: 'false'
