@@ -704,6 +704,8 @@ eda_rulebook_activations:
     rulebook: rocket_launch.yml
     decision_environment: Default Decision Environment
     enabled: true
+    eda_credentials:
+      - "EDA - AAP Events Stream Credential"
 
 eda_event_streams:
   - name: Rocket Event Stream
