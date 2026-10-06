@@ -683,7 +683,7 @@ eda_credentials:
   #     verify_ssl: '{{ aap_validate_certs }}'
   
   - name: EDA - AAP Events Stream Credential
-    credential_type:
+    credential_type: Event Stream Authentication Type
     organization: Ansible Product Demos (APD)
     update_secrets: false
     state: exists
