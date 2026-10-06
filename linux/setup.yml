@@ -668,6 +668,7 @@ eda_projects:
 eda_decision_environments:
   - name: Default Decision Environment
     description: Default decision environment for rulebooks
+    organization: Ansible Product Demos (APD)
     image_url: "registry.redhat.io/ansible-automation-platform-27/de-supported-rhel9:latest"
 
 aap_configuration_collect_logs: true
