@@ -681,15 +681,15 @@ eda_credentials:
       username: '{{ aap_username | default(omit) }}'
       password: '{{ aap_password | default(omit) }}'
       verify_ssl: '{{ aap_validate_certs }}'
-
-  - name: AAP Events Stream Credential
-    credential_type: 
-    organization: Ansible Product Demos (APD)
-    update_secrets: false
-    state: exists
-    inputs:
-      username: "{{ aap_events_username | default('ansible_events') }}"
-      password: "{{ aap_events_password | default('Ansible123!') }}"
+  #
+  # - name: AAP Events Stream Credential
+  #   credential_type:
+  #   organization: Ansible Product Demos (APD)
+  #   update_secrets: false
+  #   state: exists
+  #   inputs:
+  #     username: "{{ aap_events_username | default('ansible_events') }}"
+  #     password: "{{ aap_events_password | default('Ansible123!') }}"
 
 eda_rulebook_activations:
   - name: Monitor Rocket Events
@@ -703,5 +703,5 @@ eda_event_streams:
   - name: Rocket Event Stream
     credential_name: Example Credential
     organization: Default
-    
+
 ...
