@@ -671,7 +671,7 @@ eda_decision_environments:
     image_url: registry.redhat.io/ansible-automation-platform-27/de-supported-rhel9:latest
 
 eda_credentials:
-  - name: AAP Credential
+  - name: EDA - AAP Credential
     credential_type: Red Hat Ansible Automation Platform
     organization: Ansible Product Demos (APD)
     update_secrets: false
@@ -681,15 +681,15 @@ eda_credentials:
       username: '{{ aap_username | default(omit) }}'
       password: '{{ aap_password | default(omit) }}'
       verify_ssl: '{{ aap_validate_certs }}'
-  #
-  # - name: AAP Events Stream Credential
-  #   credential_type:
-  #   organization: Ansible Product Demos (APD)
-  #   update_secrets: false
-  #   state: exists
-  #   inputs:
-  #     username: "{{ aap_events_username | default('ansible_events') }}"
-  #     password: "{{ aap_events_password | default('Ansible123!') }}"
+  
+  - name: EDA - AAP Events Stream Credential
+    credential_type:
+    organization: Ansible Product Demos (APD)
+    update_secrets: false
+    state: exists
+    inputs:
+      username: "{{ aap_events_username | default('ansible_events') }}"
+      password: "{{ aap_events_password | default('Ansible123!') }}"
 
 eda_rulebook_activations:
   - name: Monitor Rocket Events
