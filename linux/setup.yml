@@ -704,7 +704,7 @@ eda_rulebook_activations:
 
 eda_event_streams:
   - name: Rocket Event Stream
-    credential_name: Example Credential
-    organization: Default
+    credential_name: EDA - AAP Events Stream Credential
+    organization: Ansible Product Demos (APD)
 
 ...
