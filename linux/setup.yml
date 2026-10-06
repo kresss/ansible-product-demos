@@ -682,7 +682,7 @@ eda_credentials:
     update_secrets: false
     state: present
     inputs:
-      host: '{{ aap_hostname }}'
+      host: '{{ aap_hostname }}/api/controller/'
       username: '{{ aap_username | default(omit) }}'
       password: '{{ aap_password | default(omit) }}'
       verify_ssl: '{{ aap_validate_certs }}'
