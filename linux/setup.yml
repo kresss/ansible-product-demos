@@ -698,6 +698,7 @@ eda_rulebook_activations:
   - name: Monitor Rocket Events
     description: Respond to Rocket Demo Events
     project: "Ansible Product Demos"
+    organization: Ansible Product Demos (APD)
     rulebook: rocket_launch.yml
     decision_environment: Default Decision Environment
     enabled: true
