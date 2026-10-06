@@ -706,7 +706,7 @@ eda_rulebook_activations:
     enabled: true
     event_streams:
       - event_stream: Rocket Event Stream
-        source_index: 1
+        source_index: 0
     eda_credentials:
       - "EDA - AAP Events Stream Credential"
       - "EDA - AAP Credential"
