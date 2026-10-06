@@ -663,7 +663,9 @@ eda_projects:
   - name: "Ansible Product Demos"
     description: "Event-Driven Automation Demo"
     organization: "Ansible Product Demos (APD)"
-    url: https://github.com/ansible/product-demos
+    url: "{{ eda_project_url | default('https://github.com/ansible/product-demos') }}"
+    scm_branch: "{{ eda_project_scm_branch | default(main) }}"
+    sync: "{{ eda_project_sync | default(true) }}"
 
 eda_decision_environments:
   - name: Default Decision Environment
