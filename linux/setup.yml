@@ -705,7 +705,8 @@ eda_rulebook_activations:
     decision_environment: Default Decision Environment
     enabled: true
     event_streams:
-      - Rocket Event Stream
+      - event_stream: Rocket Event Stream
+        source_index: 1
     eda_credentials:
       - "EDA - AAP Events Stream Credential"
       - "EDA - AAP Credential"
