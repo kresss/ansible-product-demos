@@ -658,4 +658,50 @@ controller_workflows:
           - Compliance Enforce
       - identifier: Compliance Enforce
         unified_job_template: "LINUX | Compliance Enforce"
+
+eda_projects:
+  - name: "Ansible Product Demos"
+    description: "Event-Driven Automation Demo"
+    organization: "Ansible Product Demos (APD)"
+    url: https://github.com/ansible/product-demos
+
+eda_decision_environments:
+  - name: Default Decision Environment
+    description: Default decision environment for rulebooks
+    image_url: registry.redhat.io/ansible-automation-platform-27/de-supported-rhel9:latest
+
+eda_credentials:
+  - name: AAP Credential
+    credential_type: Red Hat Ansible Automation Platform
+    organization: Ansible Product Demos (APD)
+    update_secrets: false
+    state: exists
+    inputs:
+      host: '{{ aap_hostname }}'
+      username: '{{ aap_username | default(omit) }}'
+      password: '{{ aap_password | default(omit) }}'
+      verify_ssl: '{{ aap_validate_certs }}'
+
+  - name: AAP Events Stream Credential
+    credential_type: 
+    organization: Ansible Product Demos (APD)
+    update_secrets: false
+    state: exists
+    inputs:
+      username: "{{ aap_events_username | default('ansible_events') }}"
+      password: "{{ aap_events_password | default('Ansible123!') }}"
+
+eda_rulebook_activations:
+  - name: Monitor Rocket Events
+    description: Respond to Rocket Demo Events
+    project: "Ansible Product Demos"
+    rulebook: rocket_launch.yml
+    decision_environment: Default Decision Environment
+    enabled: true
+
+eda_event_streams:
+  - name: Rocket Event Stream
+    credential_name: Example Credential
+    organization: Default
+    
 ...
