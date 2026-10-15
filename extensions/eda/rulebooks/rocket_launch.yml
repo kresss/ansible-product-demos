@@ -5,9 +5,6 @@
     - ansible.eda.webhook:
         host: 0.0.0.0
         port: 5000
-        # Optional: Define security if supported by your provider
-        # hmac_secret: "your_shared_secret"
-        # hmac_header: "X-Hub-Signature-256"
 
   rules:
     - name: Trigger Rocket Remeidation Template
@@ -22,6 +19,6 @@
           organization: "Ansible Product Demos (APD)"
           job_args:
             extra_vars:
-              _hosts: aws_rhel9
+              _hosts: aws_rhel9_2
               compliance_profile: stig
               use_httpd: 'false'
