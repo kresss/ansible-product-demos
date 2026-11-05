@@ -504,25 +504,14 @@ controller_templates:
     notification_templates_started: Telemetry
     notification_templates_success: Telemetry
     notification_templates_error: Telemetry
-    extra_vars:
-      create_fsx_ontap_aws_securitygroup_name: aws-test-sg
-      create_fsx_ontap_aws_vpc_subnet_name: aws-test-subnet
-      create_fsx_ontap_stack_name: aws-ontap-stack
+    survey_enabled: true
     survey:
       name: ''
       description: ''
       spec:
-        - question_name: FSx ONTAP Name
-          question_description: >-
-            Name for the FSx ONTAP file system. Will be used as the value for
-            the EC2 tag key "Name" on the FSx ONTAP file system.
-          type: text
-          variable: create_fsx_ontap_aws_name
-          required: true
-          default: aws-ontap
         - question_name: AWS Region
           question_description: >-
-            AWS region where the VPC, keypair, and all VMs will be created.
+            AWS region where the FSx ONTAP will be created.
           type: multiplechoice
           variable: create_fsx_ontap_aws_region
           required: true
@@ -532,6 +521,21 @@ controller_templates:
             - us-east-2
             - us-west-1
             - us-west-2
+        - question_name: FSx ONTAP Name
+          question_description: >-
+            Name for the FSx ONTAP file system. Will be used as the value for
+            the EC2 tag key "Name" on the FSx ONTAP file system.
+          type: text
+          variable: create_fsx_ontap_aws_name
+          required: true
+          default: aws-ontap
+        - question_name: FSx ONTAP Stack Name
+          question_description: >-
+            Name for the collection of ONTAP nodes. This dominates the
+            FSx ONTAP Name
+          type: text
+          variable: create_fsx_ontap_stack_name
+          default: aws-ontap-stack
         - question_name: Owner
           question_description: >-
             Value for the EC2 tag key "owner" on all resources this workflow
@@ -543,9 +547,8 @@ controller_templates:
           default: your_name
         - question_name: Environment
           question_description: >-
-            Value for the EC2 tag key "environment" on each VM (Dev, QA, or
-            Prod). Metadata only—it does not change instance size, patching, or
-            security settings.
+            Value for the EC2 tag key "environment" on FSx ONTAP (Dev, QA, or
+            Prod). Metadata only—it does not change settings.
           type: multiplechoice
           variable: create_fsx_ontap_aws_environment
           required: true
@@ -554,6 +557,20 @@ controller_templates:
             - Dev
             - QA
             - Prod
+        - question_name: Subnet
+          type: text
+          variable: create_fsx_ontap_aws_vpc_subnet_name
+          required: true
+          default: aws-test-subnet
+        - question_name: Security Group
+          type: text
+          variable: create_fsx_ontap_aws_securitygroup_name
+          required: true
+          default: aws-test-sg
+
+
+
+
 
 controller_workflows:
   - name: Deploy Cloud Stack in AWS
