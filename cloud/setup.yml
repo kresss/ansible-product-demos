@@ -535,6 +535,7 @@ controller_templates:
             FSx ONTAP Name
           type: text
           variable: create_fsx_ontap_stack_name
+          required: true
           default: aws-ontap-stack
         - question_name: Owner
           question_description: >-
