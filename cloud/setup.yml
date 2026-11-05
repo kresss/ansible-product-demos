@@ -497,7 +497,7 @@ controller_templates:
     organization: Ansible Product Demos (APD)
     credentials:
       - AWS
-      - ADP Machine Credential
+      - APD Machine Credential
     project: Ansible Product Demos
     playbook: cloud/create_fsx_ontap.yml
     inventory: Ansible Product Demos Inventory
