@@ -512,7 +512,7 @@ controller_templates:
       name: ''
       description: ''
       spec:
-        - querstion_name: FSx ONTAP Name
+        - question_name: FSx ONTAP Name
           question_description: >-
             Name for the FSx ONTAP file system. Will be used as the value for
             the EC2 tag key "Name" on the FSx ONTAP file system.
