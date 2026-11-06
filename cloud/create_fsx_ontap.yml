@@ -2,7 +2,6 @@
 - name: Create Amazon FSx for NetApp ONTAP File System
   hosts: localhost
   gather_facts: false
-  vars:
 
   tasks:
     - name: Fail if variables not defined
@@ -21,5 +20,4 @@
       ansible.builtin.include_role:
         name: demo.cloud.aws
         tasks_from: create_fsx_ontap
-
-
+...

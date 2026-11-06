@@ -34,7 +34,7 @@
   amazon.aws.cloudformation:
     stack_name: "{{ create_fsx_ontap_stack_name }}"
     state: present
-    region: "{{ create_fsx_ontap_region }}"
+    region: "{{ create_fsx_ontap_aws_region }}"
     template_body: |
       AWSTemplateFormatVersion: '2010-09-09'
       Resources:
