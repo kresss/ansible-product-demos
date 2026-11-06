@@ -44,12 +44,12 @@
             FileSystemType: ONTAP
             SecurityGroupIds:
               - "{{ create_fsx_ontap_aws_securitygroup_id }}"
-            StorageCapacity: "{{ create_fsx_ontap_storage_capacity | default(1024) }}"
+            StorageCapacity: "{{ create_fsx_ontap_storage_capacity | default(1024) | int }}"
             SubnetIds:
               - "{{ create_fsx_ontap_aws_subnet_id }}"
             ONTAPConfiguration:
               DeploymentType: "{{ create_fsx_ontap_deployment_type | default('SINGLE_AZ_1') }}"
-              ThroughputCapacity: "{{ create_fsx_ontap_throughput_capacity | default(128) }}"
+              ThroughputCapacity: "{{ create_fsx_ontap_throughput_capacity | default(128) | int }}"
               PreferredSubnetId: "{{ create_fsx_ontap_aws_subnet_id }}"
               FsxAdminPassword: "{{ create_fsx_ontap_admin_password | default(ansible_password) }}"
             Tags:
