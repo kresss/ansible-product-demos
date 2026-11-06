@@ -20,4 +20,9 @@
       ansible.builtin.include_role:
         name: demo.cloud.aws
         tasks_from: create_fsx_ontap
+
+- name: Add the new FSx ONTAP system to the AAP inventory
+  ansible.builtin.import_playbook: update_fsx_ontap_inventory.yml
+  vars:
+    update_fsx_ontap_inventory_aws_region: "{{ create_fsx_ontap_aws_region }}"
 ...

@@ -60,9 +60,9 @@
           Description: "FSx file system ID"
           Value: !Ref FSxFileSystem
     tags:
-      environment: "{{ create_fsx_ontap_environment | default('demo') }}"
+      environment: "{{ create_fsx_ontap_aws_environment | default('demo') }}"
       deployment: "{{ create_fsx_ontap_deployment | default('demo') }}"
-      owner: "{{ create_fsx_ontap_owner | default('demo') }}"
+      owner: "{{ create_fsx_ontap_aws_owner_tag | default('demo') }}"
       purpose: "{{ create_fsx_ontap_purpose | default('demo') }}"
       managed-by: "{{ create_fsx_ontap_aws_apd_managed_by }}"
       apd: "{{ create_vm_apd_demo_tag }}"
@@ -93,5 +93,5 @@
     host: "{{ fsx_mgmt_ip }}"
     port: 443
     state: started
-    timeout: 300
+    timeout: "{{ create_fsx_ontap_endpoint_timeout | default(1800) }}"
     delay: 10

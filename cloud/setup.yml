@@ -498,6 +498,7 @@ controller_templates:
     credentials:
       - AWS
       - APD Machine Credential
+      - AAP Credential
     project: Ansible Product Demos
     playbook: cloud/create_fsx_ontap.yml
     inventory: Ansible Product Demos Inventory
@@ -569,9 +570,82 @@ controller_templates:
           required: true
           default: aws-test-sg
 
+  - name: Cloud | AWS | Update FSx ONTAP Inventory
+    job_type: run
+    organization: Ansible Product Demos (APD)
+    credentials:
+      - AWS
+      - AAP Credential
+    project: Ansible Product Demos
+    playbook: cloud/update_fsx_ontap_inventory.yml
+    inventory: Ansible Product Demos Inventory
+    notification_templates_started: Telemetry
+    notification_templates_success: Telemetry
+    notification_templates_error: Telemetry
+    survey_enabled: true
+    survey:
+      name: ''
+      description: ''
+      spec:
+        - question_name: AWS Region
+          question_description: >-
+            AWS region to search for FSx ONTAP file systems created by the
+            Create FSx ONTAP job template.
+          type: multiplechoice
+          variable: update_fsx_ontap_inventory_aws_region
+          required: true
+          default: us-east-2
+          choices:
+            - us-east-1
+            - us-east-2
+            - us-west-1
+            - us-west-2
 
-
-
+  - name: Cloud | AWS | Delete FSx ONTAP
+    job_type: run
+    organization: Ansible Product Demos (APD)
+    credentials:
+      - AWS
+      - AAP Credential
+    project: Ansible Product Demos
+    playbook: cloud/delete_fsx_ontap.yml
+    inventory: Ansible Product Demos Inventory
+    notification_templates_started: Telemetry
+    notification_templates_success: Telemetry
+    notification_templates_error: Telemetry
+    survey_enabled: true
+    survey:
+      name: ''
+      description: ''
+      spec:
+        - question_name: AWS Region
+          question_description: >-
+            AWS region where the FSx ONTAP stack was created.
+          type: multiplechoice
+          variable: delete_fsx_ontap_aws_region
+          required: true
+          default: us-east-2
+          choices:
+            - us-east-1
+            - us-east-2
+            - us-west-1
+            - us-west-2
+        - question_name: FSx ONTAP Stack Name
+          question_description: >-
+            Name of the CloudFormation stack to delete. Deleting the stack
+            also deletes the FSx ONTAP file system and all of its data.
+          type: text
+          variable: delete_fsx_ontap_stack_name
+          required: true
+          default: aws-ontap-stack
+        - question_name: FSx ONTAP Name
+          question_description: >-
+            Name used when the file system was created. The host with this
+            name is removed from Ansible Product Demos Inventory.
+          type: text
+          variable: delete_fsx_ontap_aws_name
+          required: false
+          default: aws-ontap
 
 controller_workflows:
   - name: Deploy Cloud Stack in AWS
