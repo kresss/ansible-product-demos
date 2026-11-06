@@ -44,24 +44,21 @@
             FileSystemType: ONTAP
             SecurityGroupIds:
               - "{{ create_fsx_ontap_aws_securitygroup_id }}"
-            StorageCapacity: "{{ create_fsx_ontap_storage_capacity | default(1024) | int }}"
+            StorageCapacity: {{ create_fsx_ontap_storage_capacity | default(1024) | int }}
             SubnetIds:
               - "{{ create_fsx_ontap_aws_subnet_id }}"
             ONTAPConfiguration:
               DeploymentType: "{{ create_fsx_ontap_deployment_type | default('SINGLE_AZ_1') }}"
-              ThroughputCapacity: "{{ create_fsx_ontap_throughput_capacity | default(128) | int }}"
+              ThroughputCapacity: {{ create_fsx_ontap_throughput_capacity | default(128) | int }}
               PreferredSubnetId: "{{ create_fsx_ontap_aws_subnet_id }}"
               FsxAdminPassword: "{{ create_fsx_ontap_admin_password | default(ansible_password) }}"
             Tags:
               - Key: Name
                 Value: "{{ create_fsx_ontap_aws_name }}"
       Outputs:
-        ManagementEndpointIP:
-          Description: "Management IP for ONTAP REST API"
-          Value: !Select [0, !GetAtt FSxFileSystem.OntapConfiguration.Endpoints.Management.IpAddresses]
-        ManagementDNSName:
-          Description: "Management DNS Name"
-          Value: !GetAtt FSxFileSystem.OntapConfiguration.Endpoints.Management.DNSName
+        FileSystemId:
+          Description: "FSx file system ID"
+          Value: !Ref FSxFileSystem
     tags:
       environment: "{{ create_fsx_ontap_environment | default('demo') }}"
       deployment: "{{ create_fsx_ontap_deployment | default('demo') }}"
@@ -71,9 +68,25 @@
       apd: "{{ create_vm_apd_demo_tag }}"
   register: cfn_result
 
+- name: Get FSx ONTAP management endpoint
+  ansible.builtin.command:
+    argv:
+      - "{{ ansible_playbook_python }}"
+      - -c
+      - |
+        import boto3, json, sys
+        fsx = boto3.client("fsx", region_name=sys.argv[1])
+        fs = fsx.describe_file_systems(FileSystemIds=[sys.argv[2]])["FileSystems"][0]
+        print(json.dumps(fs["OntapConfiguration"]["Endpoints"]["Management"]))
+      - "{{ create_fsx_ontap_aws_region }}"
+      - "{{ cfn_result.stack_outputs.FileSystemId }}"
+  register: create_fsx_ontap_endpoints
+  changed_when: false
+  delegate_to: localhost
+
 - name: Set Management IP Fact
   ansible.builtin.set_fact:
-    fsx_mgmt_ip: "{{ cfn_result.stack_outputs.ManagementEndpointIP }}"
+    fsx_mgmt_ip: "{{ (create_fsx_ontap_endpoints.stdout | from_json).IpAddresses | first }}"
 
 - name: Wait for FSx ONTAP Management Endpoint to respond
   ansible.builtin.wait_for:
