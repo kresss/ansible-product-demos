@@ -47,7 +47,7 @@
             StorageCapacity: {{ create_fsx_ontap_storage_capacity | default(1024) | int }}
             SubnetIds:
               - "{{ create_fsx_ontap_aws_subnet_id }}"
-            ONTAPConfiguration:
+            OntapConfiguration:
               DeploymentType: "{{ create_fsx_ontap_deployment_type | default('SINGLE_AZ_1') }}"
               ThroughputCapacity: {{ create_fsx_ontap_throughput_capacity | default(128) | int }}
               PreferredSubnetId: "{{ create_fsx_ontap_aws_subnet_id }}"
