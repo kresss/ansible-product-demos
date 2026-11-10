@@ -87,11 +87,3 @@
 - name: Set Management IP Fact
   ansible.builtin.set_fact:
     fsx_mgmt_ip: "{{ (create_fsx_ontap_endpoints.stdout | from_json).IpAddresses | first }}"
-
-- name: Wait for FSx ONTAP Management Endpoint to respond
-  ansible.builtin.wait_for:
-    host: "{{ fsx_mgmt_ip }}"
-    port: 443
-    state: started
-    timeout: "{{ create_fsx_ontap_endpoint_timeout | default(1800) }}"
-    delay: 10

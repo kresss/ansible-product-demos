@@ -502,6 +502,8 @@ controller_templates:
     limit: all
 
   - name: Cloud | AWS | Create FSx ONTAP
+    labels:
+      - storage
     job_type: run
     organization: Ansible Product Demos (APD)
     credentials:
@@ -577,6 +579,8 @@ controller_templates:
           default: aws-test-sg
 
   - name: Cloud | AWS | Update FSx ONTAP Inventory
+    labels:
+      - storage
     job_type: run
     organization: Ansible Product Demos (APD)
     credentials:
@@ -608,6 +612,8 @@ controller_templates:
             - us-west-2
 
   - name: Cloud | AWS | Delete FSx ONTAP
+    labels:
+      - storage
     job_type: run
     organization: Ansible Product Demos (APD)
     credentials:
@@ -654,6 +660,8 @@ controller_templates:
           default: aws-ontap
 
   - name: Cloud | AWS | Register Execution Node
+    labels:
+      - storage
     job_type: run
     organization: Ansible Product Demos (APD)
     credentials:
@@ -698,6 +706,19 @@ controller_templates:
           variable: register_execution_node_instance_group
           required: false
           default: storage
+
+  - name: Cloud | AWS | Check FSx ONTAP Endpoint
+    labels:
+      - storage
+    job_type: run
+    organization: Ansible Product Demos (APD)
+    project: Ansible Product Demos
+    playbook: cloud/check_fsx_ontap_endpoint.yml
+    # Must use the storage inventory so the job runs on the execution node.
+    inventory: Ansible Product Demos Storage Inventory
+    notification_templates_started: Telemetry
+    notification_templates_success: Telemetry
+    notification_templates_error: Telemetry
 
 controller_workflows:
   - name: Deploy Cloud Stack in AWS
@@ -1123,6 +1144,8 @@ controller_workflows:
         extra_data:
           register_execution_node_vm_name: aws-storage-node
           register_execution_node_instance_group: storage
+        success_nodes:
+          - Check FSx Endpoint
         failure_nodes:
           - Ticket - Execution Node Failed
       - identifier: Create FSx ONTAP
@@ -1138,8 +1161,21 @@ controller_workflows:
           - Ticket - FSx Failed
       - identifier: Update FSx Inventory
         unified_job_template: Cloud | AWS | Update FSx ONTAP Inventory
+        success_nodes:
+          - Check FSx Endpoint
         failure_nodes:
           - Ticket - FSx Inventory Failed
+      # Runs on the execution node, so it only starts once the node is
+      # registered and the FSx system is in the storage inventory.
+      - identifier: Check FSx Endpoint
+        unified_job_template: Cloud | AWS | Check FSx ONTAP Endpoint
+        all_parents_must_converge: true
+        failure_nodes:
+          - Ticket - FSx Endpoint Failed
+      - identifier: Ticket - FSx Endpoint Failed
+        unified_job_template: 'SUBMIT FEEDBACK'
+        extra_data:
+          feedback: FSx ONTAP management endpoint is not reachable from the execution node
       - identifier: Ticket - FSx Inventory Failed
         unified_job_template: 'SUBMIT FEEDBACK'
         extra_data:
