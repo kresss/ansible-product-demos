@@ -1,0 +1,168 @@
+---
+# Registers an EC2 VM (created by create_vm.yml) as an AAP execution node:
+#   1. create the instance in AAP (node_type=execution) and download its install bundle
+#   2. install receptor on the VM using the bundle's settings (ansible.receptor.setup)
+#   3. add the instance to an instance group and wait for it to become ready
+#
+# Requires: AAP Credential (injects CONTROLLER_*), AWS credential, a machine
+# credential that can SSH/sudo on the VM, and network reachability from the AAP
+# control/hop nodes to the VM on the receptor listener port (default 27199).
+
+- name: Register the VM as an AAP execution node (controller side)
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    register_execution_node_listener_port: 27199
+    register_execution_node_instance_group: storage
+    register_execution_node_api: "{{ lookup('ansible.builtin.env', 'CONTROLLER_HOST') }}/api/controller/v2"
+    register_execution_node_token: "{{ lookup('ansible.builtin.env', 'CONTROLLER_OAUTH_TOKEN') }}"
+  module_defaults:
+    ansible.builtin.uri:
+      headers: "{{ {'Authorization': 'Bearer ' ~ register_execution_node_token} if register_execution_node_token | length > 0 else {} }}"
+      url_username: "{{ lookup('ansible.builtin.env', 'CONTROLLER_USERNAME') if register_execution_node_token | length == 0 else omit }}"
+      url_password: "{{ lookup('ansible.builtin.env', 'CONTROLLER_PASSWORD') if register_execution_node_token | length == 0 else omit }}"
+      force_basic_auth: "{{ register_execution_node_token | length == 0 }}"
+      validate_certs: "{{ (lookup('ansible.builtin.env', 'CONTROLLER_VERIFY_SSL') | default('true', true)) | bool }}"
+  tasks:
+    - name: Fail if variables not defined
+      ansible.builtin.assert:
+        that:
+          - register_execution_node_vm_name is defined
+          - register_execution_node_aws_region is defined
+        fail_msg: "register_execution_node_vm_name and register_execution_node_aws_region are required"
+
+    - name: Find the VM
+      amazon.aws.ec2_instance_info:
+        region: "{{ register_execution_node_aws_region }}"
+        filters:
+          tag:Name: "{{ register_execution_node_vm_name }}"
+          tag:apd: "true"
+          instance-state-name: running
+      register: register_execution_node_vm
+
+    - name: Fail if the VM was not found
+      ansible.builtin.assert:
+        that: register_execution_node_vm.instances | length == 1
+        fail_msg: "Expected exactly one running VM named {{ register_execution_node_vm_name }}"
+
+    # AAP control nodes must reach this address on the listener port.
+    - name: Set the node address
+      ansible.builtin.set_fact:
+        register_execution_node_hostname: >-
+          {{ register_execution_node_vm.instances[0].public_dns_name
+             | default(register_execution_node_vm.instances[0].private_ip_address, true) }}
+
+    - name: Create the execution node in AAP
+      ansible.controller.instance:
+        hostname: "{{ register_execution_node_hostname }}"
+        node_type: execution
+        listener_port: "{{ register_execution_node_listener_port }}"
+        peers_from_control_nodes: true
+
+    - name: Look up the AAP instance
+      ansible.builtin.uri:
+        url: "{{ register_execution_node_api }}/instances/?hostname={{ register_execution_node_hostname }}"
+      register: register_execution_node_lookup
+
+    - name: Set the AAP instance id
+      ansible.builtin.set_fact:
+        register_execution_node_instance_id: "{{ register_execution_node_lookup.json.results[0].id }}"
+
+    - name: Create a working directory for the install bundle
+      ansible.builtin.tempfile:
+        state: directory
+        prefix: exec_node_bundle_
+      register: register_execution_node_workdir
+
+    - name: Download the install bundle
+      ansible.builtin.uri:
+        url: "{{ register_execution_node_api }}/instances/{{ register_execution_node_instance_id }}/install_bundle/"
+        dest: "{{ register_execution_node_workdir.path }}/bundle.tar.gz"
+        return_content: false
+
+    - name: Extract the install bundle
+      ansible.builtin.unarchive:
+        src: "{{ register_execution_node_workdir.path }}/bundle.tar.gz"
+        dest: "{{ register_execution_node_workdir.path }}"
+        remote_src: true
+
+    - name: Locate the bundle inventory
+      ansible.builtin.find:
+        paths: "{{ register_execution_node_workdir.path }}"
+        patterns: inventory.yml
+        recurse: true
+      register: register_execution_node_inventory_file
+
+    - name: Read the bundle inventory
+      ansible.builtin.slurp:
+        src: "{{ register_execution_node_inventory_file.files[0].path }}"
+      register: register_execution_node_inventory_raw
+
+    # Keep only the receptor_* / custom_* settings; custom_* are file paths
+    # relative to the bundle directory, so make them absolute.
+    - name: Build receptor settings from the bundle
+      ansible.builtin.set_fact:
+        register_execution_node_receptor_vars: >-
+          {{ register_execution_node_receptor_vars | default({}) | combine({
+               item.key: (register_execution_node_inventory_file.files[0].path | dirname ~ '/' ~ item.value)
+                         if item.key.startswith('custom_') else item.value }) }}
+      loop: "{{ (register_execution_node_inventory_raw.content | b64decode | from_yaml).all.hosts.values() | first | dict2items }}"
+      loop_control:
+        label: "{{ item.key }}"
+      when: item.key.startswith('receptor_') or item.key.startswith('custom_')
+
+- name: Install receptor on the VM
+  hosts: "{{ register_execution_node_vm_name }}"
+  gather_facts: true
+  become: true
+  tasks:
+    - name: Load receptor settings from the bundle
+      ansible.builtin.set_fact:
+        "{{ item.key }}": "{{ item.value }}"
+      loop: "{{ hostvars['localhost'].register_execution_node_receptor_vars | dict2items }}"
+      loop_control:
+        label: "{{ item.key }}"
+
+    - name: Install and configure receptor
+      ansible.builtin.include_role:
+        name: ansible.receptor.setup
+
+- name: Add the execution node to an instance group and wait for it
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    register_execution_node_api: "{{ lookup('ansible.builtin.env', 'CONTROLLER_HOST') }}/api/controller/v2"
+    register_execution_node_token: "{{ lookup('ansible.builtin.env', 'CONTROLLER_OAUTH_TOKEN') }}"
+  module_defaults:
+    ansible.builtin.uri:
+      headers: "{{ {'Authorization': 'Bearer ' ~ register_execution_node_token} if register_execution_node_token | length > 0 else {} }}"
+      url_username: "{{ lookup('ansible.builtin.env', 'CONTROLLER_USERNAME') if register_execution_node_token | length == 0 else omit }}"
+      url_password: "{{ lookup('ansible.builtin.env', 'CONTROLLER_PASSWORD') if register_execution_node_token | length == 0 else omit }}"
+      force_basic_auth: "{{ register_execution_node_token | length == 0 }}"
+      validate_certs: "{{ (lookup('ansible.builtin.env', 'CONTROLLER_VERIFY_SSL') | default('true', true)) | bool }}"
+  tasks:
+    - name: Add the instance to the instance group
+      ansible.controller.instance_group:
+        name: "{{ register_execution_node_instance_group | default('storage') }}"
+        instances:
+          - "{{ register_execution_node_hostname }}"
+        state: present
+
+    # Jobs that use this inventory run on the storage instance group.
+    - name: Run storage inventory jobs on the instance group
+      ansible.controller.inventory:
+        name: "{{ register_execution_node_inventory_name | default('Ansible Product Demos Storage Inventory') }}"
+        organization: Ansible Product Demos (APD)
+        instance_groups:
+          - "{{ register_execution_node_instance_group | default('storage') }}"
+
+    - name: Wait for the node to report ready
+      ansible.builtin.uri:
+        url: "{{ register_execution_node_api }}/instances/{{ register_execution_node_instance_id }}/"
+      register: register_execution_node_state
+      until: register_execution_node_state.json.node_state == 'ready'
+      retries: 30
+      delay: 10
+...

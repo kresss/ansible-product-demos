@@ -19,6 +19,6 @@
     - name: Remove FSx ONTAP host from the AAP inventory
       ansible.controller.host:
         name: "{{ delete_fsx_ontap_aws_name }}"
-        inventory: "{{ delete_fsx_ontap_inventory_name | default('Ansible Product Demos Inventory') }}"
+        inventory: "{{ delete_fsx_ontap_inventory_name | default('Ansible Product Demos Storage Inventory') }}"
         state: absent
       when: delete_fsx_ontap_aws_name is defined

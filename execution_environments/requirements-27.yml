@@ -37,6 +37,7 @@ collections:
     version: "<11.6.0"
   - name: community.aws
     version: "<11.2.0"
+  - name: ansible.receptor
   - name: netapp.ontap
     version: ">=21.0.0"
   - name: netapp.cloudmanager

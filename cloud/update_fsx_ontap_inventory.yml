@@ -4,7 +4,7 @@
   gather_facts: false
 
   vars:
-    update_fsx_ontap_inventory_name: Ansible Product Demos Inventory
+    update_fsx_ontap_inventory_name: Ansible Product Demos Storage Inventory
     update_fsx_ontap_inventory_group: fsx_ontap
     # Only FSx file systems carrying this tag are added (set by create_fsx_ontap.yml)
     update_fsx_ontap_inventory_managed_by: aap-product-demos
@@ -82,6 +82,10 @@
         name: "{{ update_fsx_ontap_inventory_group }}"
         inventory: "{{ update_fsx_ontap_inventory_name }}"
         state: present
+        # ONTAP is managed through its REST API, not SSH, so tasks for these
+        # hosts run on the execution node itself.
+        variables:
+          ansible_connection: local
         preserve_existing_hosts: true
         hosts: "{{ update_fsx_ontap_inventory_systems | map(attribute='name') | list }}"
       when: update_fsx_ontap_inventory_systems | length > 0
