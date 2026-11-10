@@ -632,11 +632,11 @@ controller_templates:
       spec:
         - question_name: AWS Region
           question_description: >-
-            AWS region where the FSx ONTAP stack was created.
+            AWS region where the FSx ONTAP stack was created. Optional when
+            launched from Destroy a Storage Stack on AWS, which supplies the region.
           type: multiplechoice
           variable: delete_fsx_ontap_aws_region
-          required: true
-          default: us-east-2
+          required: false
           choices:
             - us-east-1
             - us-east-2
@@ -719,6 +719,46 @@ controller_templates:
     notification_templates_started: Telemetry
     notification_templates_success: Telemetry
     notification_templates_error: Telemetry
+
+  - name: Cloud | AWS | Deregister Execution Node
+    labels:
+      - storage
+    job_type: run
+    organization: Ansible Product Demos (APD)
+    credentials:
+      - AWS
+      - AAP Credential
+    project: Ansible Product Demos
+    playbook: cloud/deregister_execution_node.yml
+    inventory: Ansible Product Demos Inventory
+    notification_templates_started: Telemetry
+    notification_templates_success: Telemetry
+    notification_templates_error: Telemetry
+    survey_enabled: true
+    survey:
+      name: ''
+      description: ''
+      spec:
+        - question_name: AWS Region
+          question_description: >-
+            AWS region where the VM was created. Optional when launched from
+            Destroy a Storage Stack on AWS, which supplies the region.
+          type: multiplechoice
+          variable: deregister_execution_node_aws_region
+          required: false
+          choices:
+            - us-east-1
+            - us-east-2
+            - us-west-1
+            - us-west-2
+        - question_name: VM Name
+          question_description: >-
+            Name tag of the RHEL VM registered as an AAP execution node. It
+            must still be running so AAP can uninstall receptor from it.
+          type: text
+          variable: deregister_execution_node_vm_name
+          required: true
+          default: aws-storage-node
 
 controller_workflows:
   - name: Deploy Cloud Stack in AWS
@@ -1192,3 +1232,75 @@ controller_workflows:
         unified_job_template: 'SUBMIT FEEDBACK'
         extra_data:
           feedback: Failed to create FSx ONTAP
+
+  - name: Destroy a Storage Stack on AWS
+    description: >-
+      Tear down what Deploy a Storage Stack on AWS created: the FSx ONTAP
+      file system and its inventory host, and the storage execution node
+      (deregistered from AAP, then its VM deleted). The keypair and VPC from
+      Deploy Cloud Stack in AWS are left in place; use Destroy Cloud Stack in
+      AWS for those.
+    labels:
+      - aws.ec2
+      - rhel
+      - storage
+    organization: Ansible Product Demos (APD)
+    notification_templates_started: Telemetry
+    notification_templates_success: Telemetry
+    notification_templates_error: Telemetry
+    survey_enabled: true
+    survey:
+      name: ''
+      description: ''
+      spec:
+        - question_name: AWS Region
+          question_description: >-
+            AWS region where the storage stack was deployed.
+          type: multiplechoice
+          variable: create_vm_aws_region
+          required: true
+          default: us-east-2
+          choices:
+            - us-east-1
+            - us-east-2
+            - us-west-1
+            - us-west-2
+    simplified_workflow_nodes:
+      - identifier: Delete FSx ONTAP
+        unified_job_template: Cloud | AWS | Delete FSx ONTAP
+        extra_data:
+          delete_fsx_ontap_stack_name: aws-ontap-stack
+          delete_fsx_ontap_aws_name: aws-ontap
+        failure_nodes:
+          - Ticket - FSx Delete Failed
+      # The node must be deregistered while its VM is still running.
+      - identifier: Deregister Execution Node
+        unified_job_template: Cloud | AWS | Deregister Execution Node
+        extra_data:
+          deregister_execution_node_vm_name: aws-storage-node
+        success_nodes:
+          - Delete Storage Node
+        failure_nodes:
+          - Ticket - Deregister Failed
+      - identifier: Delete Storage Node
+        unified_job_template: Cloud | AWS | Delete Stack VM
+        extra_data:
+          create_vm_vm_name: aws-storage-node
+        success_nodes:
+          - Update Inventory
+        failure_nodes:
+          - Ticket - VM Delete Failed
+      - identifier: Update Inventory
+        unified_job_template: AWS Inventory
+      - identifier: Ticket - FSx Delete Failed
+        unified_job_template: 'SUBMIT FEEDBACK'
+        extra_data:
+          feedback: Failed to delete FSx ONTAP
+      - identifier: Ticket - Deregister Failed
+        unified_job_template: 'SUBMIT FEEDBACK'
+        extra_data:
+          feedback: Failed to deregister the storage execution node
+      - identifier: Ticket - VM Delete Failed
+        unified_job_template: 'SUBMIT FEEDBACK'
+        extra_data:
+          feedback: Failed to delete the storage node instance

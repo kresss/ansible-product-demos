@@ -4,6 +4,14 @@
   gather_facts: false
 
   tasks:
+    # Destroy a Storage Stack on AWS supplies the region as create_vm_aws_region.
+    - name: Default the region from the shared workflow survey answer
+      ansible.builtin.set_fact:
+        delete_fsx_ontap_aws_region: "{{ create_vm_aws_region }}"
+      when:
+        - lookup('ansible.builtin.vars', 'delete_fsx_ontap_aws_region', default='') | length == 0
+        - lookup('ansible.builtin.vars', 'create_vm_aws_region', default='') | length > 0
+
     - name: Fail if variables not defined
       ansible.builtin.assert:
         that:
