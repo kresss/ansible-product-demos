@@ -520,11 +520,11 @@ controller_templates:
       spec:
         - question_name: AWS Region
           question_description: >-
-            AWS region where the FSx ONTAP will be created.
+            AWS region where the FSx ONTAP will be created. Optional when
+            launched from Deploy a Storage Stack on AWS, which supplies the region.
           type: multiplechoice
           variable: create_fsx_ontap_aws_region
-          required: true
-          default: us-east-2
+          required: false
           choices:
             - us-east-1
             - us-east-2
@@ -553,16 +553,14 @@ controller_templates:
             inventory keyed groups as owner_*.
           type: text
           variable: create_fsx_ontap_aws_owner_tag
-          required: true
-          default: your_name
+          required: false
         - question_name: Environment
           question_description: >-
             Value for the EC2 tag key "environment" on FSx ONTAP (Dev, QA, or
             Prod). Metadata only—it does not change settings.
           type: multiplechoice
           variable: create_fsx_ontap_aws_environment
-          required: true
-          default: Prod
+          required: false
           choices:
             - Dev
             - QA
@@ -598,11 +596,11 @@ controller_templates:
         - question_name: AWS Region
           question_description: >-
             AWS region to search for FSx ONTAP file systems created by the
-            Create FSx ONTAP job template.
+            Create FSx ONTAP job template. Optional when launched from Deploy
+            a Storage Stack on AWS, which supplies the region.
           type: multiplechoice
           variable: update_fsx_ontap_inventory_aws_region
-          required: true
-          default: us-east-2
+          required: false
           choices:
             - us-east-1
             - us-east-2
@@ -675,11 +673,11 @@ controller_templates:
       spec:
         - question_name: AWS Region
           question_description: >-
-            AWS region where the VM was created.
+            AWS region where the VM was created. Optional when launched from
+            Deploy a Storage Stack on AWS, which supplies the region.
           type: multiplechoice
           variable: register_execution_node_aws_region
-          required: true
-          default: us-east-2
+          required: false
           choices:
             - us-east-1
             - us-east-2
@@ -1106,51 +1104,6 @@ controller_workflows:
           variable: email
           required: true
           default: your_name@acme.org
-        # The FSx ONTAP job template has its own variable names, so the same
-        # values are asked for again here.
-        - question_name: FSx ONTAP Region
-          question_description: >-
-            Must match the AWS Region above.
-          type: multiplechoice
-          variable: create_fsx_ontap_aws_region
-          required: true
-          default: us-east-2
-          choices:
-            - us-east-1
-            - us-east-2
-            - us-west-1
-            - us-west-2
-        - question_name: FSx ONTAP Owner
-          question_description: >-
-            Value for the EC2 tag key "owner" on FSx ONTAP.
-          type: text
-          variable: create_fsx_ontap_aws_owner_tag
-          required: true
-          default: your_name
-        - question_name: FSx ONTAP Environment
-          question_description: >-
-            Value for the EC2 tag key "environment" on FSx ONTAP.
-          type: multiplechoice
-          variable: create_fsx_ontap_aws_environment
-          required: true
-          default: Prod
-          choices:
-            - Dev
-            - QA
-            - Prod
-        - question_name: FSx Inventory Update Region
-          question_description: >-
-            Must match the AWS Region above. Region searched when adding FSx
-            ONTAP systems to the storage inventory.
-          type: multiplechoice
-          variable: update_fsx_ontap_inventory_aws_region
-          required: true
-          default: us-east-2
-          choices:
-            - us-east-1
-            - us-east-2
-            - us-west-1
-            - us-west-2
     simplified_workflow_nodes:
       - identifier: Deploy Storage Node
         unified_job_template: Cloud | AWS | Create VM

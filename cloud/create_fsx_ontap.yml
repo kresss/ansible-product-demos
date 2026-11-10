@@ -4,6 +4,21 @@
   gather_facts: false
 
   tasks:
+    # Deploy a Storage Stack on AWS asks for these once, using the Create VM
+    # variable names; use them when the FSx-specific ones are not set.
+    - name: Default variables from the shared workflow survey answers
+      ansible.builtin.set_fact:
+        "{{ item.key }}": "{{ lookup('ansible.builtin.vars', item.value) }}"
+      loop: "{{ _shared_defaults | dict2items }}"
+      when:
+        - lookup('ansible.builtin.vars', item.key, default='') | length == 0
+        - lookup('ansible.builtin.vars', item.value, default='') | length > 0
+      vars:
+        _shared_defaults:
+          create_fsx_ontap_aws_region: create_vm_aws_region
+          create_fsx_ontap_aws_owner_tag: create_vm_aws_owner_tag
+          create_fsx_ontap_aws_environment: vm_environment
+
     - name: Fail if variables not defined
       ansible.builtin.assert:
         that:

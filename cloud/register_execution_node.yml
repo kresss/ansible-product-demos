@@ -25,6 +25,14 @@
       force_basic_auth: "{{ register_execution_node_token | length == 0 }}"
       validate_certs: "{{ (lookup('ansible.builtin.env', 'CONTROLLER_VERIFY_SSL') | default('true', true)) | bool }}"
   tasks:
+    # Deploy a Storage Stack on AWS supplies the region as create_vm_aws_region.
+    - name: Default the region from the shared workflow survey answer
+      ansible.builtin.set_fact:
+        register_execution_node_aws_region: "{{ create_vm_aws_region }}"
+      when:
+        - lookup('ansible.builtin.vars', 'register_execution_node_aws_region', default='') | length == 0
+        - lookup('ansible.builtin.vars', 'create_vm_aws_region', default='') | length > 0
+
     - name: Fail if variables not defined
       ansible.builtin.assert:
         that:
