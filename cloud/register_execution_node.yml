@@ -106,7 +106,7 @@
       ansible.builtin.debug:
         msg: "{{ register_execution_node_bundle_files.files | map(attribute='path') | map('regex_replace', '^' ~ register_execution_node_workdir.path ~ '/', '') | sort }}"
 
-    - name: Locate the bundle playbook and inventory
+    - name: Locate the bundle playbook, inventory and group vars
       ansible.builtin.set_fact:
         register_execution_node_bundle_playbook: >-
           {{ register_execution_node_bundle_files.files | map(attribute='path')
@@ -114,6 +114,9 @@
         register_execution_node_bundle_inventory: >-
           {{ register_execution_node_bundle_files.files | map(attribute='path')
              | select('match', '.*/inventory[.]ya?ml$') | first | default('') }}
+        register_execution_node_bundle_group_vars: >-
+          {{ register_execution_node_bundle_files.files | map(attribute='path')
+             | select('match', '.*/group_vars/all[.]ya?ml$') | first | default('') }}
 
     - name: Fail if the bundle has no install playbook
       ansible.builtin.assert:
@@ -133,31 +136,29 @@
       register: register_execution_node_inventory_raw
       when: register_execution_node_bundle_inventory | length > 0
 
-    # The bundle's YAML files hold settings and file names, not keys or
-    # certificates (those are under receptor/), so they are safe to print.
-    - name: Show the bundle playbook
-      ansible.builtin.debug:
-        msg: "{{ (register_execution_node_playbook_raw.content | b64decode).splitlines() }}"
+    - name: Read the bundle group vars
+      ansible.builtin.slurp:
+        src: "{{ register_execution_node_bundle_group_vars }}"
+      register: register_execution_node_group_vars_raw
+      when: register_execution_node_bundle_group_vars | length > 0
 
-    - name: Show the bundle inventory
-      ansible.builtin.debug:
-        msg: "{{ (register_execution_node_inventory_raw.content | b64decode).splitlines() }}"
-      when: register_execution_node_inventory_raw is not skipped
-
-    # The receptor settings are role variables in the bundle's install_receptor.yml
-    # (play vars, role vars or task vars); the inventory only holds connection
-    # details. Merge every source so the layout does not matter, with the play
-    # settings taking precedence over inventory ones.
+    # The receptor settings live in the bundle's group_vars/all.yml. Also merge
+    # inventory host vars and any vars set in install_receptor.yml, in that
+    # order, so a differently laid out bundle still works.
     - name: Collect receptor settings from the bundle
+      vars:
+        _group_vars: >-
+          {{ ((register_execution_node_group_vars_raw.content | b64decode | from_yaml) or {})
+             if register_execution_node_group_vars_raw is not skipped else {} }}
+        _inventory_vars: >-
+          {{ ((register_execution_node_inventory_raw.content | b64decode | from_yaml).all.hosts.values() | first | default({}))
+             if register_execution_node_inventory_raw is not skipped else {} }}
+        _play: "{{ register_execution_node_playbook_raw.content | b64decode | from_yaml | first }}"
       ansible.builtin.set_fact:
         register_execution_node_bundle_settings: >-
-          {{ ( [ ( (register_execution_node_inventory_raw.content | default('e30=') | b64decode | from_yaml).all.hosts.values() | first | default({}) )
-                 if register_execution_node_inventory_raw is not skipped else {} ]
-               + [ (register_execution_node_playbook_raw.content | b64decode | from_yaml | first).vars | default({}) ]
-               + (register_execution_node_playbook_raw.content | b64decode | from_yaml | first).roles | default([])
-                   | selectattr('vars', 'defined') | map(attribute='vars') | list
-               + (register_execution_node_playbook_raw.content | b64decode | from_yaml | first).tasks | default([])
-                   | selectattr('vars', 'defined') | map(attribute='vars') | list
+          {{ ( [ _group_vars, _inventory_vars, _play.vars | default({}) ]
+               + (_play.roles | default([]) | selectattr('vars', 'defined') | map(attribute='vars') | list)
+               + (_play.tasks | default([]) | selectattr('vars', 'defined') | map(attribute='vars') | list)
              ) | combine }}
 
     # Settings that are file paths (custom_*file) are relative to the bundle
@@ -193,6 +194,16 @@
       loop: "{{ hostvars['localhost'].register_execution_node_receptor_vars | dict2items }}"
       loop_control:
         label: "{{ item.key }}"
+
+    # The same three steps as the bundle's install_receptor.yml.
+    - name: Create the receptor user
+      ansible.builtin.user:
+        name: "{{ receptor_user }}"
+        shell: /bin/bash
+
+    - name: Install podman for receptor
+      ansible.builtin.include_role:
+        name: ansible.receptor.podman
 
     - name: Install and configure receptor
       ansible.builtin.include_role:
