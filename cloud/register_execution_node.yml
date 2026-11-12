@@ -95,30 +95,81 @@
         dest: "{{ register_execution_node_workdir.path }}"
         remote_src: true
 
-    - name: Locate the bundle inventory
+    - name: List the install bundle files
       ansible.builtin.find:
         paths: "{{ register_execution_node_workdir.path }}"
-        patterns: inventory.yml
+        file_type: file
         recurse: true
-      register: register_execution_node_inventory_file
+      register: register_execution_node_bundle_files
+
+    - name: Show the install bundle files
+      ansible.builtin.debug:
+        msg: "{{ register_execution_node_bundle_files.files | map(attribute='path') | map('regex_replace', '^' ~ register_execution_node_workdir.path ~ '/', '') | sort }}"
+
+    - name: Locate the bundle playbook and inventory
+      ansible.builtin.set_fact:
+        register_execution_node_bundle_playbook: >-
+          {{ register_execution_node_bundle_files.files | map(attribute='path')
+             | select('match', '.*/install_receptor[.]ya?ml$') | first | default('') }}
+        register_execution_node_bundle_inventory: >-
+          {{ register_execution_node_bundle_files.files | map(attribute='path')
+             | select('match', '.*/inventory[.]ya?ml$') | first | default('') }}
+
+    - name: Fail if the bundle has no install playbook
+      ansible.builtin.assert:
+        that: register_execution_node_bundle_playbook | length > 0
+        fail_msg: >-
+          install_receptor.yml was not found in the install bundle; see the file
+          list above for what the bundle contains.
+
+    - name: Read the bundle playbook
+      ansible.builtin.slurp:
+        src: "{{ register_execution_node_bundle_playbook }}"
+      register: register_execution_node_playbook_raw
 
     - name: Read the bundle inventory
       ansible.builtin.slurp:
-        src: "{{ register_execution_node_inventory_file.files[0].path }}"
+        src: "{{ register_execution_node_bundle_inventory }}"
       register: register_execution_node_inventory_raw
+      when: register_execution_node_bundle_inventory | length > 0
 
-    # Keep only the receptor_* / custom_* settings; custom_* are file paths
-    # relative to the bundle directory, so make them absolute.
+    # The receptor settings are role variables in the bundle's install_receptor.yml
+    # (play vars, role vars or task vars); the inventory only holds connection
+    # details. Merge every source so the layout does not matter, with the play
+    # settings taking precedence over inventory ones.
+    - name: Collect receptor settings from the bundle
+      ansible.builtin.set_fact:
+        register_execution_node_bundle_settings: >-
+          {{ ( [ ( (register_execution_node_inventory_raw.content | default('e30=') | b64decode | from_yaml).all.hosts.values() | first | default({}) )
+                 if register_execution_node_inventory_raw is not skipped else {} ]
+               + [ (register_execution_node_playbook_raw.content | b64decode | from_yaml | first).vars | default({}) ]
+               + (register_execution_node_playbook_raw.content | b64decode | from_yaml | first).roles | default([])
+                   | selectattr('vars', 'defined') | map(attribute='vars') | list
+               + (register_execution_node_playbook_raw.content | b64decode | from_yaml | first).tasks | default([])
+                   | selectattr('vars', 'defined') | map(attribute='vars') | list
+             ) | combine }}
+
+    # Settings that are file paths (custom_*file) are relative to the bundle
+    # directory, so make them absolute. Connection settings are not receptor's.
     - name: Build receptor settings from the bundle
       ansible.builtin.set_fact:
         register_execution_node_receptor_vars: >-
           {{ register_execution_node_receptor_vars | default({}) | combine({
-               item.key: (register_execution_node_inventory_file.files[0].path | dirname ~ '/' ~ item.value)
-                         if item.key.startswith('custom_') else item.value }) }}
-      loop: "{{ (register_execution_node_inventory_raw.content | b64decode | from_yaml).all.hosts.values() | first | dict2items }}"
+               item.key: (register_execution_node_bundle_playbook | dirname ~ '/' ~ item.value)
+                         if (item.key.startswith('custom_') and item.key.endswith('file')
+                             and item.value is string and not item.value.startswith('/'))
+                         else item.value }) }}
+      loop: "{{ register_execution_node_bundle_settings | dict2items }}"
       loop_control:
         label: "{{ item.key }}"
-      when: item.key.startswith('receptor_') or item.key.startswith('custom_')
+      when: not item.key.startswith('ansible_')
+
+    - name: Fail if no receptor settings were found
+      ansible.builtin.assert:
+        that: register_execution_node_receptor_vars | default({}) | length > 0
+        fail_msg: >-
+          No receptor settings were found in the install bundle. Check the
+          bundle file list above and the layout of install_receptor.yml.
 
 - name: Install receptor on the VM
   hosts: "{{ register_execution_node_vm_name }}"
@@ -135,6 +186,17 @@
     - name: Install and configure receptor
       ansible.builtin.include_role:
         name: ansible.receptor.setup
+
+    - name: Verify receptor is running
+      ansible.builtin.command: systemctl is-active receptor
+      register: register_execution_node_service
+      changed_when: false
+
+    - name: Verify receptor is listening on the mesh port
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: "{{ receptor_port | default(27199) }}"
+        timeout: 60
 
 - name: Add the execution node to an instance group and wait for it
   hosts: localhost
@@ -166,11 +228,21 @@
         instance_groups:
           - "{{ register_execution_node_instance_group | default('storage') }}"
 
-    - name: Wait for the node to report ready
+    # The control plane dials the node on its listener port, so a failure here
+    # (for example "not in the receptor mesh") means AAP cannot reach it.
+    - name: Run an AAP health check on the node
       ansible.builtin.uri:
-        url: "{{ register_execution_node_api }}/instances/{{ register_execution_node_instance_id }}/"
-      register: register_execution_node_state
-      until: register_execution_node_state.json.node_state == 'ready'
+        url: "{{ register_execution_node_api }}/instances/{{ register_execution_node_instance_id }}/health_check/"
+        method: POST
+        status_code: [200, 202]
+
+    - name: Wait for the health check to pass
+      ansible.builtin.uri:
+        url: "{{ register_execution_node_api }}/instances/{{ register_execution_node_instance_id }}/health_check/"
+      register: register_execution_node_health
+      until:
+        - register_execution_node_health.json.last_health_check | default(none) is not none
+        - register_execution_node_health.json.errors | default('') | length == 0
       retries: 30
       delay: 10
 ...
