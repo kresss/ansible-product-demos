@@ -208,7 +208,18 @@
       loop_control:
         label: "{{ item.key }}"
 
-    # The same three steps as the bundle's install_receptor.yml.
+    - name: Check the receptor user and group are valid account names
+      ansible.builtin.assert:
+        that:
+          - receptor_user is match('^[a-z_][a-z0-9_-]*$')
+          - receptor_group is match('^[a-z_][a-z0-9_-]*$')
+        fail_msg: >-
+          receptor_user/receptor_group are not valid account names
+          (receptor_user={{ receptor_user | to_json }}, receptor_group={{ receptor_group | to_json }}).
+
+    # The same three steps as the bundle's install_receptor.yml. The roles read
+    # the account from receptor_user in some versions and podman_user in
+    # others, so pass the resolved values explicitly under both names.
     - name: Create the receptor user
       ansible.builtin.user:
         name: "{{ receptor_user }}"
@@ -217,10 +228,18 @@
     - name: Install podman for receptor
       ansible.builtin.include_role:
         name: ansible.receptor.podman
+      vars:
+        receptor_user: "{{ hostvars['localhost'].register_execution_node_receptor_vars.receptor_user }}"
+        receptor_group: "{{ hostvars['localhost'].register_execution_node_receptor_vars.receptor_group }}"
+        podman_user: "{{ hostvars['localhost'].register_execution_node_receptor_vars.receptor_user }}"
+        podman_group: "{{ hostvars['localhost'].register_execution_node_receptor_vars.receptor_group }}"
 
     - name: Install and configure receptor
       ansible.builtin.include_role:
         name: ansible.receptor.setup
+      vars:
+        receptor_user: "{{ hostvars['localhost'].register_execution_node_receptor_vars.receptor_user }}"
+        receptor_group: "{{ hostvars['localhost'].register_execution_node_receptor_vars.receptor_group }}"
 
     - name: Verify receptor is running
       ansible.builtin.command: systemctl is-active receptor
