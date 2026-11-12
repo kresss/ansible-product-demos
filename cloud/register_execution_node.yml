@@ -15,6 +15,7 @@
   vars:
     register_execution_node_listener_port: 27199
     register_execution_node_instance_group: storage
+    register_execution_node_receptor_user: ansible
     register_execution_node_api: "{{ lookup('ansible.builtin.env', 'CONTROLLER_HOST') }}/api/controller/v2"
     register_execution_node_token: "{{ lookup('ansible.builtin.env', 'CONTROLLER_OAUTH_TOKEN') }}"
   module_defaults:
@@ -182,6 +183,18 @@
         fail_msg: >-
           No receptor settings were found in the install bundle. Check the
           bundle file list above and the layout of install_receptor.yml.
+
+    # The bundle's playbook creates receptor_user, so one is always needed.
+    # Use the bundle's own values when it sets them; otherwise default to
+    # register_execution_node_receptor_user (ansible), with the group to match.
+    - name: Default the receptor user and group
+      ansible.builtin.set_fact:
+        register_execution_node_receptor_vars: >-
+          {{ register_execution_node_receptor_vars
+             | combine({
+                 'receptor_user': register_execution_node_receptor_vars.receptor_user | default(register_execution_node_receptor_user),
+                 'receptor_group': register_execution_node_receptor_vars.receptor_group
+                                   | default(register_execution_node_receptor_vars.receptor_user | default(register_execution_node_receptor_user)) }) }}
 
 - name: Install receptor on the VM
   hosts: "{{ register_execution_node_vm_name }}"
