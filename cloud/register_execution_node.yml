@@ -133,6 +133,17 @@
       register: register_execution_node_inventory_raw
       when: register_execution_node_bundle_inventory | length > 0
 
+    # The bundle's YAML files hold settings and file names, not keys or
+    # certificates (those are under receptor/), so they are safe to print.
+    - name: Show the bundle playbook
+      ansible.builtin.debug:
+        msg: "{{ (register_execution_node_playbook_raw.content | b64decode).splitlines() }}"
+
+    - name: Show the bundle inventory
+      ansible.builtin.debug:
+        msg: "{{ (register_execution_node_inventory_raw.content | b64decode).splitlines() }}"
+      when: register_execution_node_inventory_raw is not skipped
+
     # The receptor settings are role variables in the bundle's install_receptor.yml
     # (play vars, role vars or task vars); the inventory only holds connection
     # details. Merge every source so the layout does not matter, with the play
