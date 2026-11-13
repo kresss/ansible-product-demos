@@ -668,6 +668,7 @@ controller_templates:
       - AWS
       - AAP Credential
       - APD Machine Credential
+      - RHSM Registration
     project: Ansible Product Demos
     playbook: cloud/register_execution_node.yml
     inventory: Ansible Product Demos Inventory

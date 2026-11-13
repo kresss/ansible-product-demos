@@ -16,9 +16,10 @@
     register_execution_node_listener_port: 27199
     register_execution_node_instance_group: storage
     register_execution_node_receptor_user: ansible
-    # release: download receptor from GitHub (no subscription needed).
-    # package: install the receptor RPM, which needs the AAP repo enabled on the VM.
-    register_execution_node_receptor_install_method: release
+    # package: install the receptor and ansible-runner RPMs from the AAP repo,
+    #   which needs the VM registered with RHSM (RHSM Registration credential).
+    # release: download receptor from GitHub; no subscription needed.
+    register_execution_node_receptor_install_method: package
     register_execution_node_api: "{{ lookup('ansible.builtin.env', 'CONTROLLER_HOST') }}/api/controller/v2"
     register_execution_node_token: "{{ lookup('ansible.builtin.env', 'CONTROLLER_OAUTH_TOKEN') }}"
   module_defaults:
@@ -199,20 +200,22 @@
                  'receptor_group': register_execution_node_receptor_vars.receptor_group
                                    | default(register_execution_node_receptor_vars.receptor_user | default(register_execution_node_receptor_user)) }) }}
 
-    # The bundle asks for the receptor RPM, which comes from the AAP repo and
-    # needs a subscription; a stock RHEL VM does not have it. With the release
-    # method the role downloads the binary and installs receptorctl with pip, so
-    # also install ansible-runner, which an execution node needs and which the
-    # RPM would normally bring.
+    # package (default): the bundle's receptor RPMs, plus ansible-runner, come
+    # from the AAP repo that play 2 enables. release: receptor is downloaded and
+    # receptorctl installed with pip, so ansible-runner is installed with pip too.
     - name: Choose how receptor is installed
       ansible.builtin.set_fact:
         register_execution_node_receptor_vars: >-
           {{ register_execution_node_receptor_vars
              | combine({'receptor_install_method': register_execution_node_receptor_install_method})
-             | combine({'additional_python_packages':
-                          (register_execution_node_receptor_vars.additional_python_packages | default([])
-                           + ['ansible-runner']) | unique}
-                       if register_execution_node_receptor_install_method != 'package' else {}) }}
+             | combine(
+                 {'additional_system_packages':
+                    (register_execution_node_receptor_vars.additional_system_packages | default([])
+                     + ['ansible-runner']) | unique}
+                 if register_execution_node_receptor_install_method == 'package' else
+                 {'additional_python_packages':
+                    (register_execution_node_receptor_vars.additional_python_packages | default([])
+                     + ['ansible-runner']) | unique}) }}
 
 - name: Install receptor on the VM
   hosts: "{{ register_execution_node_vm_name }}"
@@ -234,6 +237,28 @@
         fail_msg: >-
           receptor_user/receptor_group are not valid account names
           (receptor_user={{ receptor_user | to_json }}, receptor_group={{ receptor_group | to_json }}).
+
+    # The receptor and ansible-runner RPMs are in the AAP repo, which a stock
+    # RHEL VM does not have: register it with RHSM, then enable the repo.
+    - name: Enable the AAP repo for the receptor packages
+      when: receptor_install_method == 'package'
+      block:
+        - name: Ensure RHSM registration
+          ansible.builtin.include_tasks: tasks/rhsm_ensure_registered.yml
+
+        - name: Fail if the VM could not be registered
+          ansible.builtin.assert:
+            that: rhsm_registered | default(false)
+            fail_msg: >-
+              The VM is not registered with RHSM, so the AAP repo cannot be enabled.
+              Add the RHSM Registration credential (org id and activation key) to
+              this job template, or set register_execution_node_receptor_install_method
+              to release to download receptor instead.
+
+        - name: Enable the AAP repo
+          community.general.rhsm_repository:
+            name: "{{ register_execution_node_aap_repo | default('ansible-automation-platform-2.7-for-rhel-9-x86_64-rpms') }}"
+            state: enabled
 
     # The same three steps as the bundle's install_receptor.yml. The roles read
     # the account from receptor_user in some versions and podman_user in
