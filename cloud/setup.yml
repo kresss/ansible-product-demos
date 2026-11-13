@@ -713,6 +713,8 @@ controller_templates:
       - storage
     job_type: run
     organization: Ansible Product Demos (APD)
+    credentials:
+      - APD Machine Credential
     project: Ansible Product Demos
     playbook: cloud/check_fsx_ontap_endpoint.yml
     # Must use the storage inventory so the job runs on the execution node.

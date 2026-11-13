@@ -18,6 +18,12 @@
 - name: Wait for the FSx ONTAP management endpoints to respond
   hosts: fsx_ontap
   gather_facts: false
+  vars:
+    # Same password create_fsx_ontap.yml set on the fsxadmin account.
+    check_fsx_ontap_endpoint_user: fsxadmin
+    check_fsx_ontap_endpoint_password: >-
+      {{ check_fsx_ontap_endpoint_admin_password
+         | default(create_fsx_ontap_admin_password | default(ansible_password | default('', true), true), true) }}
   tasks:
     - name: Wait for the management endpoint to answer on HTTPS
       ansible.builtin.wait_for:
@@ -26,4 +32,38 @@
         state: started
         timeout: "{{ check_fsx_ontap_endpoint_timeout | default(600) }}"
         delay: 10
+
+    - name: Fail if there is no password to query ONTAP with
+      ansible.builtin.assert:
+        that: check_fsx_ontap_endpoint_password | length > 0
+        fail_msg: >-
+          No fsxadmin password available. Add the APD Machine Credential to this job
+          template, or set create_fsx_ontap_admin_password (or
+          check_fsx_ontap_endpoint_admin_password).
+
+    # Uses the netapp.ontap collection, so a successful run also proves the
+    # collection works from this execution node. FSx ONTAP uses a self-signed
+    # certificate, hence validate_certs: false.
+    - name: Get the ONTAP version
+      netapp.ontap.na_ontap_rest_info:
+        hostname: "{{ ansible_host }}"
+        username: "{{ check_fsx_ontap_endpoint_user }}"
+        password: "{{ check_fsx_ontap_endpoint_password }}"
+        use_rest: always
+        https: true
+        validate_certs: false
+        gather_subset:
+          - cluster/software
+      register: check_fsx_ontap_endpoint_software
+      until: check_fsx_ontap_endpoint_software is not failed
+      retries: 6
+      delay: 10
+
+    - name: Show the ONTAP version
+      vars:
+        _software: "{{ check_fsx_ontap_endpoint_software.ontap_info['cluster/software'] }}"
+      ansible.builtin.debug:
+        msg: >-
+          {{ inventory_hostname }} ({{ ansible_host }}) is running ONTAP
+          {{ _software.version if _software.version is defined else _software.records[0].version }}
 ...
