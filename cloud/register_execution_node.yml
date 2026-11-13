@@ -277,12 +277,17 @@
         podman_user: "{{ hostvars['localhost'].register_execution_node_receptor_vars.receptor_user }}"
         podman_group: "{{ hostvars['localhost'].register_execution_node_receptor_vars.receptor_group }}"
 
+    # The bundle's TLS certificate is issued for the hostname the instance was
+    # registered under, and the role uses routable_hostname (else ansible_host,
+    # which is the public IP here) as the receptor node id and certificate file
+    # name. They must match or receptor refuses to start.
     - name: Install and configure receptor
       ansible.builtin.include_role:
         name: ansible.receptor.setup
       vars:
         receptor_user: "{{ hostvars['localhost'].register_execution_node_receptor_vars.receptor_user }}"
         receptor_group: "{{ hostvars['localhost'].register_execution_node_receptor_vars.receptor_group }}"
+        routable_hostname: "{{ hostvars['localhost'].register_execution_node_hostname }}"
 
     - name: Verify ansible-runner is available
       ansible.builtin.command: ansible-runner --version
