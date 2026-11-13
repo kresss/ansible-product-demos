@@ -51,7 +51,7 @@
               DeploymentType: "{{ create_fsx_ontap_deployment_type | default('SINGLE_AZ_1') }}"
               ThroughputCapacity: {{ create_fsx_ontap_throughput_capacity | default(128) | int }}
               PreferredSubnetId: "{{ create_fsx_ontap_aws_subnet_id }}"
-              FsxAdminPassword: "{{ create_fsx_ontap_admin_password | default(ansible_password) }}"
+              FsxAdminPassword: "{{ create_fsx_ontap_admin_password | default(fsx_ontap_password) }}"
             Tags:
               - Key: Name
                 Value: "{{ create_fsx_ontap_aws_name }}"

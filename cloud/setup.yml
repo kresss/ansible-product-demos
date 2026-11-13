@@ -7,6 +7,11 @@ user_message:
     To enable automatic RHSM registration on unregistered RHEL hosts,
     update the 'RHSM Registration' credential in AAP with your org ID
     and activation key. https://access.redhat.com/management/activation_keys
+  - >-
+    To create or manage Amazon FSx for NetApp ONTAP, update the 'FSx ONTAP'
+    credential in AAP with the password for the fsxadmin account. It is set
+    as the fsxadmin password when the file system is created, and used to
+    log in to it afterwards.
 
 controller_credential_types:
   - name: RHSM Activation Key
@@ -27,6 +32,25 @@ controller_credential_types:
       extra_vars:
         rhsm_org_id: !unsafe '{{ rhsm_org_id }}'
         rhsm_activation_key: !unsafe '{{ rhsm_activation_key }}'
+  - name: FSx ONTAP Admin
+    kind: cloud
+    inputs:
+      fields:
+        - id: fsx_ontap_username
+          type: string
+          label: Admin Username
+          default: fsxadmin
+        - id: fsx_ontap_password
+          type: string
+          label: Admin Password
+          secret: true
+      required:
+        - fsx_ontap_username
+        - fsx_ontap_password
+    injectors:
+      extra_vars:
+        fsx_ontap_username: !unsafe '{{ fsx_ontap_username }}'
+        fsx_ontap_password: !unsafe '{{ fsx_ontap_password }}'
 
 controller_credentials:
   - name: RHSM Registration
@@ -37,6 +61,14 @@ controller_credentials:
     inputs:
       rhsm_org_id: REPLACEME
       rhsm_activation_key: REPLACEME
+  - name: FSx ONTAP
+    credential_type: FSx ONTAP Admin
+    organization: Ansible Product Demos (APD)
+    update_secrets: false
+    state: exists
+    inputs:
+      fsx_ontap_username: fsxadmin
+      fsx_ontap_password: REPLACEME
 
 controller_execution_environments:
   - name: TMM AWS EE
@@ -508,7 +540,7 @@ controller_templates:
     organization: Ansible Product Demos (APD)
     credentials:
       - AWS
-      - APD Machine Credential
+      - FSx ONTAP
     project: Ansible Product Demos
     playbook: cloud/create_fsx_ontap.yml
     inventory: Ansible Product Demos Inventory
@@ -714,7 +746,7 @@ controller_templates:
     job_type: run
     organization: Ansible Product Demos (APD)
     credentials:
-      - APD Machine Credential
+      - FSx ONTAP
     project: Ansible Product Demos
     playbook: cloud/check_fsx_ontap_endpoint.yml
     # Must use the storage inventory so the job runs on the execution node.

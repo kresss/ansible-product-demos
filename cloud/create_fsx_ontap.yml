@@ -31,6 +31,18 @@
           - create_fsx_ontap_aws_environment is defined
         fail_msg: "Required variables not set"
 
+    # The password comes from the FSx ONTAP credential (fsx_ontap_password), or
+    # create_fsx_ontap_admin_password. The credential is seeded with REPLACEME.
+    - name: Fail if there is no usable fsxadmin password
+      ansible.builtin.assert:
+        that:
+          - (create_fsx_ontap_admin_password | default(fsx_ontap_password | default('', true), true)) | length > 0
+          - (create_fsx_ontap_admin_password | default(fsx_ontap_password | default('', true), true)) != 'REPLACEME'
+        fail_msg: >-
+          No fsxadmin password. Update the FSx ONTAP credential in AAP with the
+          password to set (and attach it to this job template), or set
+          create_fsx_ontap_admin_password.
+
     - name: Include create fsx ontap role
       ansible.builtin.include_role:
         name: demo.cloud.aws

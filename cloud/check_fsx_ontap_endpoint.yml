@@ -19,12 +19,21 @@
   hosts: fsx_ontap
   gather_facts: false
   vars:
-    # Same password create_fsx_ontap.yml set on the fsxadmin account.
-    check_fsx_ontap_endpoint_user: fsxadmin
+    # From the FSx ONTAP credential, the same password create_fsx_ontap.yml set.
+    check_fsx_ontap_endpoint_user: "{{ fsx_ontap_username | default('fsxadmin', true) }}"
     check_fsx_ontap_endpoint_password: >-
       {{ check_fsx_ontap_endpoint_admin_password
-         | default(create_fsx_ontap_admin_password | default(ansible_password | default('', true), true), true) }}
+         | default(fsx_ontap_password | default('', true), true) }}
   tasks:
+    - name: Fail if there is no usable password to query ONTAP with
+      ansible.builtin.assert:
+        that:
+          - check_fsx_ontap_endpoint_password | length > 0
+          - check_fsx_ontap_endpoint_password != 'REPLACEME'
+        fail_msg: >-
+          No fsxadmin password. Update the FSx ONTAP credential in AAP and attach it
+          to this job template (or set check_fsx_ontap_endpoint_admin_password).
+
     - name: Wait for the management endpoint to answer on HTTPS
       ansible.builtin.wait_for:
         host: "{{ ansible_host }}"
@@ -32,14 +41,6 @@
         state: started
         timeout: "{{ check_fsx_ontap_endpoint_timeout | default(600) }}"
         delay: 10
-
-    - name: Fail if there is no password to query ONTAP with
-      ansible.builtin.assert:
-        that: check_fsx_ontap_endpoint_password | length > 0
-        fail_msg: >-
-          No fsxadmin password available. Add the APD Machine Credential to this job
-          template, or set create_fsx_ontap_admin_password (or
-          check_fsx_ontap_endpoint_admin_password).
 
     # Uses the netapp.ontap collection, so a successful run also proves the
     # collection works from this execution node. FSx ONTAP uses a self-signed
