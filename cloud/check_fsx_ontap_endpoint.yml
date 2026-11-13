@@ -44,7 +44,8 @@
 
     # Uses the netapp.ontap collection, so a successful run also proves the
     # collection works from this execution node. FSx ONTAP uses a self-signed
-    # certificate, hence validate_certs: false.
+    # certificate, hence validate_certs: false. The fsxadmin account is
+    # restricted: it may read the cluster version, but not cluster/software.
     - name: Get the ONTAP version
       netapp.ontap.na_ontap_rest_info:
         hostname: "{{ ansible_host }}"
@@ -54,17 +55,15 @@
         https: true
         validate_certs: false
         gather_subset:
-          - cluster/software
-      register: check_fsx_ontap_endpoint_software
-      until: check_fsx_ontap_endpoint_software is not failed
+          - cluster
+        fields:
+          - version
+      register: check_fsx_ontap_endpoint_cluster
+      until: check_fsx_ontap_endpoint_cluster is not failed
       retries: 6
       delay: 10
 
     - name: Show the ONTAP version
-      vars:
-        _software: "{{ check_fsx_ontap_endpoint_software.ontap_info['cluster/software'] }}"
       ansible.builtin.debug:
-        msg: >-
-          {{ inventory_hostname }} ({{ ansible_host }}) is running ONTAP
-          {{ _software.version if _software.version is defined else _software.records[0].version }}
+        msg: "{{ check_fsx_ontap_endpoint_cluster.ontap_info['cluster'].version.full }}"
 ...
